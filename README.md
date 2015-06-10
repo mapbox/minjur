@@ -35,6 +35,20 @@ Run like this:
 Call with `--help` to see command line options.
 
 
+## Working with updates
+
+Run like this:
+
+    export INDEX=sparse_mmap_array
+    minjur -d -l $INDEX OLD_OSMFILE >out.geojson
+    minjur-generate-tilelist -l $INDEX,locations.dump CHANGE_FILE >tiles.list
+    minjur -d -l $INDEX -t tiles.list NEW_OSMFILE >changes.geojson
+
+Or, on the planet:
+
+    export INDEX=dense_mmap_array
+    ...
+
 ## Name
 
 This project is named after the town of Minjur in India which I know nothing

@@ -1,6 +1,8 @@
 
 #include <iostream>
+#include <fstream>
 #include <cassert>
+#include <set>
 #include <getopt.h>
 
 #include <osmium/index/map/all.hpp>
@@ -12,6 +14,7 @@
 #include <osmium/handler.hpp>
 
 #include "rapid_geojson.hpp"
+#include "tile.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -19,12 +22,13 @@
 #include <rapidjson/stringbuffer.h>
 #pragma GCC diagnostic pop
 
-typedef osmium::index::map::Dummy<osmium::unsigned_object_id_type, osmium::Location> index_neg_type;
 typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
 
-typedef osmium::handler::NodeLocationsForWays<index_pos_type, index_neg_type> location_handler_type;
+typedef osmium::handler::NodeLocationsForWays<index_pos_type> location_handler_type;
 
 typedef rapidjson::Writer<rapidjson::StringBuffer> writer_type;
+
+typedef std::set<std::pair<unsigned int, unsigned int>> tileset_type;
 
 class JSONFeature {
 
@@ -83,6 +87,8 @@ class JSONHandler : public osmium::handler::Handler {
     std::string m_buffer;
     int m_geometry_error_count;
     bool m_create_polygons;
+    tileset_type m_tiles;
+    unsigned int m_zoom;
 
     void flush_to_output() {
         auto written = write(1, m_buffer.data(), m_buffer.size());
@@ -98,9 +104,11 @@ class JSONHandler : public osmium::handler::Handler {
 
 public:
 
-    JSONHandler(bool create_polygons) :
+    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom) :
         m_buffer(),
-        m_create_polygons(create_polygons) {
+        m_create_polygons(create_polygons),
+        m_tiles(tiles),
+        m_zoom(zoom) {
     }
 
     ~JSONHandler() {
@@ -109,6 +117,12 @@ public:
 
     void node(const osmium::Node& node) {
         if (node.tags().empty()) {
+            return;
+        }
+
+        auto tile = latlon2tile(node.location().lat(), node.location().lon(), m_zoom);
+
+        if (!m_tiles.empty() && !m_tiles.count(tile)) {
             return;
         }
 
@@ -121,6 +135,21 @@ public:
     }
 
     void way(const osmium::Way& way) {
+        if (!m_tiles.empty()) {
+            bool keep = false;
+            for (auto ref : way.nodes()) {
+                auto tile = latlon2tile(ref.location().lat(), ref.location().lon(), m_zoom);
+                if (m_tiles.count(tile)) {
+                    keep = true;
+                    break;
+                }
+            }
+
+            if (!keep) {
+                return;
+            }
+        }
+
         try {
             {
                 JSONFeature feature;
@@ -159,7 +188,9 @@ void print_help() {
               << "  -h, --help                 This help message\n" \
               << "  -l, --location_store=TYPE  Set location store\n" \
               << "  -p, --polygons             Create polygons from closed ways\n" \
-              << "  -L                         See available location stores\n";
+              << "  -t, --tilefile=FILE        File with tiles to filter\n" \
+              << "  -L                         See available location stores\n" \
+              << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -171,15 +202,19 @@ int main(int argc, char* argv[]) {
         {"location_store",       required_argument, 0, 'l'},
         {"list_location_stores", no_argument, 0, 'L'},
         {"polygons",             no_argument, 0, 'p'},
+        {"tilefile",             required_argument, 0, 't'},
+        {"zoom",                 required_argument, 0, 'z'},
         {0, 0, 0, 0}
     };
 
     std::string location_store { "sparse_mem_array" };
+    std::string tile_file_name;
     bool dump = false;
     bool create_polygons = false;
+    int zoom = 15;
 
     while (true) {
-        int c = getopt_long(argc, argv, "dhl:Lp", long_options, 0);
+        int c = getopt_long(argc, argv, "dhl:Lpt:z:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -190,6 +225,9 @@ int main(int argc, char* argv[]) {
                 exit(0);
             case 'd':
                 dump = true;
+                break;
+            case 't':
+                tile_file_name = optarg;
                 break;
             case 'p':
                 create_polygons = true;
@@ -203,6 +241,9 @@ int main(int argc, char* argv[]) {
                     std::cout << "  " << map_type << "\n";
                 }
                 exit(0);
+            case 'z':
+                zoom = atoi(optarg);
+                break;
             default:
                 exit(1);
         }
@@ -219,14 +260,29 @@ int main(int argc, char* argv[]) {
         input_filename = "-";
     }
 
+    tileset_type tiles;
+    if (!tile_file_name.empty()) {
+        std::ifstream file(tile_file_name);
+        if (! file.is_open()) {
+            std::cerr << "can't open file file\n";
+            exit(1);
+        }
+        unsigned int x;
+        unsigned int y;
+        while (file) {
+            file >> x;
+            file >> y;
+            tiles.insert(std::make_pair(x, y));
+        }
+    }
+
     osmium::io::Reader reader(input_filename);
 
     std::unique_ptr<index_pos_type> index_pos = map_factory.create_map(location_store);
-    index_neg_type index_neg;
-    location_handler_type location_handler(*index_pos, index_neg);
+    location_handler_type location_handler(*index_pos);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(create_polygons);
+    JSONHandler json_handler(create_polygons, tiles, zoom);
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();

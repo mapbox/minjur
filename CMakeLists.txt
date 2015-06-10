@@ -18,11 +18,12 @@ include(common)
 
 #----------------------------------------------------------------------
 
-set(PROG minjur)
-set(SOURCES minjur.cpp)
 include_directories(include)
-add_executable(${PROG} ${SOURCES})
-target_link_libraries(${PROG} ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 
+add_executable(minjur minjur.cpp tile.cpp tile.hpp)
+target_link_libraries(minjur ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
+
+add_executable(minjur-generate-tilelist minjur-generate-tilelist.cpp tile.cpp tile.hpp)
+target_link_libraries(minjur-generate-tilelist ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 
 #----------------------------------------------------------------------
