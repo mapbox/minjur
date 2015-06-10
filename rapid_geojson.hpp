@@ -71,6 +71,32 @@ namespace osmium {
                     m_writer.EndObject();
                 }
 
+                /* Polygon */
+
+                // { "type": "Polygon", "coordinates": [[[100.0, 0.0], [101.0, 1.0]]] }
+                void polygon_start() {
+                    m_writer.String("geometry");
+                    m_writer.StartObject();
+                    m_writer.String("type");
+                    m_writer.String("Polygon");
+                    m_writer.String("coordinates");
+                    m_writer.StartArray();
+                    m_writer.StartArray();
+                }
+
+                void polygon_add_location(const osmium::geom::Coordinates& xy) {
+                    m_writer.StartArray();
+                    m_writer.Double(xy.x);
+                    m_writer.Double(xy.y);
+                    m_writer.EndArray();
+                }
+
+                polygon_type polygon_finish(size_t /* num_points */) {
+                    m_writer.EndArray();
+                    m_writer.EndArray();
+                    m_writer.EndObject();
+                }
+
                 /* MultiPolygon */
 
                 void multipolygon_start() {

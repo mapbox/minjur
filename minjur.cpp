@@ -31,6 +31,7 @@ class JSONHandler : public osmium::handler::Handler {
     rapidjson::StringBuffer m_stream;
     writer_type m_writer;
     osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
+    bool m_create_polygons;
 
     void write_tags(const osmium::TagList& tags, const char* id_name, osmium::object_id_type id) {
         m_writer.String("properties");
@@ -60,10 +61,11 @@ class JSONHandler : public osmium::handler::Handler {
 
 public:
 
-    JSONHandler() :
+    JSONHandler(bool create_polygons) :
         m_stream(),
         m_writer(m_stream),
-        m_factory(m_writer) {
+        m_factory(m_writer),
+        m_create_polygons(create_polygons) {
     }
 
     ~JSONHandler() {
@@ -104,6 +106,20 @@ public:
 
         m_stream.Put('\n');
         maybe_flush();
+
+        if (m_create_polygons && way.is_closed() && way.nodes().size() >= 3) {
+            m_writer.StartObject();
+            m_writer.String("type");
+            m_writer.String("Feature");
+
+            m_factory.create_polygon(way);
+            write_tags(way.tags(), "_osm_way_id", way.id());
+
+            m_writer.EndObject();
+
+            m_stream.Put('\n');
+            maybe_flush();
+        }
     }
 
 };
@@ -118,6 +134,7 @@ void print_help() {
               << "  -d, --dump                 Dump location store after run\n" \
               << "  -h, --help                 This help message\n" \
               << "  -l, --location_store=TYPE  Set location store\n" \
+              << "  -p, --polygons             Create polygons from closed ways\n" \
               << "  -L                         See available location stores\n";
 }
 
@@ -125,18 +142,20 @@ int main(int argc, char* argv[]) {
     const auto& map_factory = osmium::index::MapFactory<osmium::unsigned_object_id_type, osmium::Location>::instance();
 
     static struct option long_options[] = {
+        {"dump",                 no_argument, 0, 'd'},
         {"help",                 no_argument, 0, 'h'},
         {"location_store",       required_argument, 0, 'l'},
-        {"dump",                 no_argument, 0, 'd'},
         {"list_location_stores", no_argument, 0, 'L'},
+        {"polygons",             no_argument, 0, 'p'},
         {0, 0, 0, 0}
     };
 
     std::string location_store { "sparse_mem_array" };
     bool dump = false;
+    bool create_polygons = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "hdl:L", long_options, 0);
+        int c = getopt_long(argc, argv, "dhl:Lp", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -147,6 +166,9 @@ int main(int argc, char* argv[]) {
                 exit(0);
             case 'd':
                 dump = true;
+                break;
+            case 'p':
+                create_polygons = true;
                 break;
             case 'l':
                 location_store = optarg;
@@ -180,7 +202,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index_pos, index_neg);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler;
+    JSONHandler json_handler(create_polygons);
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();
