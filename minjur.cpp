@@ -24,16 +24,38 @@ typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Locatio
 
 typedef osmium::handler::NodeLocationsForWays<index_pos_type, index_neg_type> location_handler_type;
 
-class JSONHandler : public osmium::handler::Handler {
+typedef rapidjson::Writer<rapidjson::StringBuffer> writer_type;
 
-    typedef rapidjson::Writer<rapidjson::StringBuffer> writer_type;
+class JSONFeature {
 
     rapidjson::StringBuffer m_stream;
     writer_type m_writer;
     osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
-    bool m_create_polygons;
 
-    void write_tags(const osmium::TagList& tags, const char* id_name, osmium::object_id_type id) {
+public:
+
+    JSONFeature() :
+        m_stream(),
+        m_writer(m_stream),
+        m_factory(m_writer) {
+        m_writer.StartObject();
+        m_writer.String("type");
+        m_writer.String("Feature");
+    }
+
+    void add_point(const osmium::Node& node) {
+        m_factory.create_point(node);
+    }
+
+    void add_linestring(const osmium::Way& way) {
+        m_factory.create_linestring(way);
+    }
+
+    void add_polygon(const osmium::Way& way) {
+        m_factory.create_polygon(way);
+    }
+
+    void add_tags(const osmium::TagList& tags, const char* id_name, osmium::object_id_type id) {
         m_writer.String("properties");
 
         m_writer.StartObject();
@@ -46,25 +68,38 @@ class JSONHandler : public osmium::handler::Handler {
         m_writer.EndObject();
     }
 
+    void append_to(std::string& buffer) {
+        m_writer.EndObject();
+
+        buffer.append(m_stream.GetString(), m_stream.GetSize());
+        buffer.append(1, '\n');
+    }
+
+}; // class JSONFeature
+
+
+class JSONHandler : public osmium::handler::Handler {
+
+    std::string m_buffer;
+    int m_geometry_error_count;
+    bool m_create_polygons;
+
     void flush_to_output() {
-        auto written = write(1, m_stream.GetString(), m_stream.GetSize());
-        assert(written == long(m_stream.GetSize()));
-        m_stream.Clear();
+        auto written = write(1, m_buffer.data(), m_buffer.size());
+        assert(written == long(m_buffer.size()));
+        m_buffer.clear();
     }
 
     void maybe_flush() {
-        if (m_stream.GetSize() > 1024*1024) {
+        if (m_buffer.size() > 1024*1024) {
             flush_to_output();
         }
-        m_writer.Reset(m_stream);
     }
 
 public:
 
     JSONHandler(bool create_polygons) :
-        m_stream(),
-        m_writer(m_stream),
-        m_factory(m_writer),
+        m_buffer(),
         m_create_polygons(create_polygons) {
     }
 
@@ -77,52 +112,41 @@ public:
             return;
         }
 
-        m_writer.StartObject();
-        m_writer.String("type");
-        m_writer.String("Feature");
+        JSONFeature feature;
+        feature.add_point(node);
+        feature.add_tags(node.tags(), "_osm_node_id", node.id());
+        feature.append_to(m_buffer);
 
-        m_factory.create_point(node);
-        write_tags(node.tags(), "_osm_node_id", node.id());
-
-        m_writer.EndObject();
-
-        m_stream.Put('\n');
         maybe_flush();
     }
 
     void way(const osmium::Way& way) {
-        if (way.nodes().size() < 2) {
-            return;
-        }
+        try {
+            {
+                JSONFeature feature;
+                feature.add_linestring(way);
+                feature.add_tags(way.tags(), "_osm_way_id", way.id());
+                feature.append_to(m_buffer);
+            }
 
-        m_writer.StartObject();
-        m_writer.String("type");
-        m_writer.String("Feature");
+            if (m_create_polygons && way.is_closed()) {
+                JSONFeature feature;
+                feature.add_polygon(way);
+                feature.add_tags(way.tags(), "_osm_way_id", way.id());
+                feature.append_to(m_buffer);
+            }
 
-        m_factory.create_linestring(way);
-        write_tags(way.tags(), "_osm_way_id", way.id());
-
-        m_writer.EndObject();
-
-        m_stream.Put('\n');
-        maybe_flush();
-
-        if (m_create_polygons && way.is_closed() && way.nodes().size() >= 3) {
-            m_writer.StartObject();
-            m_writer.String("type");
-            m_writer.String("Feature");
-
-            m_factory.create_polygon(way);
-            write_tags(way.tags(), "_osm_way_id", way.id());
-
-            m_writer.EndObject();
-
-            m_stream.Put('\n');
             maybe_flush();
+        } catch (osmium::geometry_error&) {
+            ++m_geometry_error_count;
         }
     }
 
-};
+    int geometry_error_count() const {
+        return m_geometry_error_count;
+    }
+
+}; // class JSONHandler
 
 /* ================================================== */
 
@@ -206,6 +230,10 @@ int main(int argc, char* argv[]) {
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();
+
+    if (json_handler.geometry_error_count()) {
+        std::cerr << "Geometry error count: " << json_handler.geometry_error_count() << "\n";
+    }
 
     google::protobuf::ShutdownProtobufLibrary();
 
