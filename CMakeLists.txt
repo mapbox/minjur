@@ -3,7 +3,7 @@
 #  Single example osmium-contrib CMakeLists.txt
 #
 #----------------------------------------------------------------------
-project(osm2geojson)
+project(minjur)
 
 cmake_minimum_required(VERSION 2.8.5)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
@@ -18,8 +18,9 @@ include(common)
 
 #----------------------------------------------------------------------
 
-set(PROG osm2geojson)
-file(GLOB SOURCES *.cpp *.hpp)
+set(PROG minjur)
+set(SOURCES minjur.cpp)
+include_directories(include)
 add_executable(${PROG} ${SOURCES})
 target_link_libraries(${PROG} ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 

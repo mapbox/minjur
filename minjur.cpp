@@ -11,6 +11,12 @@
 #include <osmium/io/any_input.hpp>
 #include <osmium/handler.hpp>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#pragma GCC diagnostic pop
+
 typedef osmium::index::map::Dummy<osmium::unsigned_object_id_type, osmium::Location> index_neg_type;
 typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
 
