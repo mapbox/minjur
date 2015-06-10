@@ -11,6 +11,8 @@
 #include <osmium/io/any_input.hpp>
 #include <osmium/handler.hpp>
 
+#include "rapid_geojson.hpp"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <rapidjson/writer.h>
@@ -24,40 +26,83 @@ typedef osmium::handler::NodeLocationsForWays<index_pos_type, index_neg_type> lo
 
 class JSONHandler : public osmium::handler::Handler {
 
-    osmium::geom::GeoJSONFactory<> m_factory;
-//    int m_fd;
+    typedef rapidjson::Writer<rapidjson::StringBuffer> writer_type;
+
+    rapidjson::StringBuffer m_stream;
+    writer_type m_writer;
+    osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
+
+    void write_tags(const osmium::TagList& tags) {
+        m_writer.String("properties");
+
+        m_writer.StartObject();
+        for (const auto& tag : tags) {
+            m_writer.String(tag.key());
+            m_writer.String(tag.value());
+        }
+        m_writer.EndObject();
+    }
+
+    void flush_to_output() {
+        auto written = write(1, m_stream.GetString(), m_stream.GetSize());
+        assert(written == long(m_stream.GetSize()));
+        m_stream.Clear();
+    }
+
+    void maybe_flush() {
+        if (m_stream.GetSize() > 1024*1024) {
+            flush_to_output();
+        }
+        m_writer.Reset(m_stream);
+    }
 
 public:
 
-    JSONHandler(const std::string& /*filename*/) {
-//        m_fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0666);
-//        assert(m_fd >= 0);
+    JSONHandler() :
+        m_stream(),
+        m_writer(m_stream),
+        m_factory(m_writer) {
+    }
+
+    ~JSONHandler() {
+        flush_to_output();
     }
 
     void node(const osmium::Node& node) {
-        if (!node.tags().empty()) {
-            std::string point = m_factory.create_point(node);
-            std::cout << "{ \"geometry\": " <<  point;
-            for (const auto& tag : node.tags()) {
-                std::cout << ",{\"" << tag.key() << "\":\"" << tag.value() << "\"}";
-            }
-            std::cout << "}\n";
+        if (node.tags().empty()) {
+            return;
         }
-//        write(m_fd, point.c_str(), point.size());
+
+        m_writer.StartObject();
+        m_writer.String("type");
+        m_writer.String("Feature");
+
+        m_factory.create_point(node);
+        write_tags(node.tags());
+
+        m_writer.EndObject();
+
+        m_stream.Put('\n');
+        maybe_flush();
     }
 
     void way(const osmium::Way& way) {
         try {
-            std::string linestring = m_factory.create_linestring(way);
-            std::cout << "{ \"geometry\": " << linestring;
-            for (const auto& tag : way.tags()) {
-                std::cout << ",{\"" << tag.key() << "\":\"" << tag.value() << "\"}";
-            }
-            std::cout << "}\n";
+            m_writer.StartObject();
+            m_writer.String("type");
+            m_writer.String("Feature");
+
+            m_factory.create_linestring(way);
+            write_tags(way.tags());
+
+            m_writer.EndObject();
+
+            m_stream.Put('\n');
+            maybe_flush();
+
         } catch(...) {
             return;
         }
-//        write(m_fd, linestring.c_str(), linestring.size());
     }
 
 };
@@ -65,13 +110,13 @@ public:
 /* ================================================== */
 
 void print_help() {
-    std::cout << "osmium_toogr [OPTIONS] [INFILE [OUTFILE]]\n\n" \
+    std::cout << "minjur [OPTIONS] [INFILE]\n\n" \
               << "If INFILE is not given stdin is assumed.\n" \
-              << "If OUTFILE is not given 'ogr_out' is used.\n" \
+              << "Output is always to stdout.\n" \
               << "\nOptions:\n" \
+              << "  -d, --dump                 Dump location store after run\n" \
               << "  -h, --help                 This help message\n" \
               << "  -l, --location_store=TYPE  Set location store\n" \
-              << "  -f, --format=FORMAT        Output OGR format (Default: 'SQLite')\n" \
               << "  -L                         See available location stores\n";
 }
 
@@ -117,14 +162,10 @@ int main(int argc, char* argv[]) {
     }
 
     std::string input_filename;
-    std::string output_filename("out.json");
     int remaining_args = argc - optind;
-    if (remaining_args > 2) {
-        std::cerr << "Usage: " << argv[0] << " [OPTIONS] [INFILE [OUTFILE]]" << std::endl;
+    if (remaining_args > 1) {
+        std::cerr << "Usage: " << argv[0] << " [OPTIONS] [INFILE]" << std::endl;
         exit(1);
-    } else if (remaining_args == 2) {
-        input_filename =  argv[optind];
-        output_filename = argv[optind+1];
     } else if (remaining_args == 1) {
         input_filename =  argv[optind];
     } else {
@@ -138,7 +179,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index_pos, index_neg);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(output_filename);
+    JSONHandler json_handler;
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();
