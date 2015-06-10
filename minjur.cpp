@@ -32,10 +32,12 @@ class JSONHandler : public osmium::handler::Handler {
     writer_type m_writer;
     osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
 
-    void write_tags(const osmium::TagList& tags) {
+    void write_tags(const osmium::TagList& tags, const char* id_name, osmium::object_id_type id) {
         m_writer.String("properties");
 
         m_writer.StartObject();
+        m_writer.String(id_name);
+        m_writer.Double(id);
         for (const auto& tag : tags) {
             m_writer.String(tag.key());
             m_writer.String(tag.value());
@@ -78,7 +80,7 @@ public:
         m_writer.String("Feature");
 
         m_factory.create_point(node);
-        write_tags(node.tags());
+        write_tags(node.tags(), "_osm_node_id", node.id());
 
         m_writer.EndObject();
 
@@ -87,22 +89,21 @@ public:
     }
 
     void way(const osmium::Way& way) {
-        try {
-            m_writer.StartObject();
-            m_writer.String("type");
-            m_writer.String("Feature");
-
-            m_factory.create_linestring(way);
-            write_tags(way.tags());
-
-            m_writer.EndObject();
-
-            m_stream.Put('\n');
-            maybe_flush();
-
-        } catch(...) {
+        if (way.nodes().size() < 2) {
             return;
         }
+
+        m_writer.StartObject();
+        m_writer.String("type");
+        m_writer.String("Feature");
+
+        m_factory.create_linestring(way);
+        write_tags(way.tags(), "_osm_way_id", way.id());
+
+        m_writer.EndObject();
+
+        m_stream.Put('\n');
+        maybe_flush();
     }
 
 };
