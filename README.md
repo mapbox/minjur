@@ -39,14 +39,14 @@ Call with `--help` to see command line options.
 
 Run like this:
 
-    export INDEX=sparse_mmap_array
-    minjur -d -l $INDEX OLD_OSMFILE >out.geojson
-    minjur-generate-tilelist -l $INDEX,locations.dump CHANGE_FILE >tiles.list
-    minjur -d -l $INDEX -t tiles.list NEW_OSMFILE >changes.geojson
+    export INDEX=sparse
+    minjur -d -l ${INDEX}_mmap_array OLD_OSMFILE >out.geojson
+    minjur-generate-tilelist -l ${INDEX}_file_array,locations.dump CHANGE_FILE >tiles.list
+    minjur -d -l ${INDEX}_mmap_array -t tiles.list NEW_OSMFILE >changes.geojson
 
 Or, on the planet:
 
-    export INDEX=dense_mmap_array
+    export INDEX=dense
     ...
 
 ## Name
