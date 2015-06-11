@@ -37,17 +37,44 @@ Call with `--help` to see command line options.
 
 ## Working with updates
 
-Run like this:
+If you are working with a planet file or very large extract (a large continent)
+set:
 
-    export INDEX=sparse
-    minjur -d -l ${INDEX}_mmap_array OLD_OSMFILE >out.geojson
-    minjur-generate-tilelist -l ${INDEX}_file_array,locations.dump CHANGE_FILE >tiles.list
-    minjur -d -l ${INDEX}_mmap_array -t tiles.list NEW_OSMFILE >changes.geojson
+    export INDEX_TYPE=dense
 
-Or, on the planet:
+If you are working with a small (city-sized) to medium (country-sized) extract
+set:
 
-    export INDEX=dense
-    ...
+    export INDEX_TYPE=sparse
+
+On Linux set
+
+    export INDEX_MAP=mmap
+
+On OS/X or Windows set:
+
+    export INDEX_MAP=map
+
+Then run like this on the old OSM data file:
+
+    minjur -d -l ${INDEX_TYPE}_${INDEX_MAP}_array OLD_OSMFILE >out.geojson
+
+This will create a file `locations.dump` in addition to `out.geojson`. With
+the change file (usually with suffix `.osc.gz`) you run the following to
+create the tile list:
+
+    minjur-generate-tilelist -l ${INDEX_TYPE}_file_array,locations.dump CHANGE_FILE >tiles.list
+
+Then run `minjur` again with the tile list to create a GeoJSON file with only
+the changes:
+
+    minjur -d -l ${INDEX_TYPE}_${INDEX_MAP}_array -t tiles.list NEW_OSMFILE >changes.geojson
+
+Repeat the last two lines for every change file.
+
+For planet updates, you'll need at least 25GB RAM for the node location cache,
+on OS/X and Windows it could be twice that!
+
 
 ## Name
 
