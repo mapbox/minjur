@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
 
     if (location_store.empty()) {
         location_store = nodes_dense ? "dense" : "sparse";
-        location_store.append("_file_array");
+        location_store.append("_file_array,locations.dump");
     }
 
     std::cerr << "Using the '" << location_store << "' location store. Use -l or -n to change this.\n";
