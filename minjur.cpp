@@ -10,11 +10,11 @@
 #include <osmium/visitor.hpp>
 
 #include <osmium/geom/geojson.hpp>
+#include <osmium/geom/tile.hpp>
 #include <osmium/io/any_input.hpp>
 #include <osmium/handler.hpp>
 
 #include "rapid_geojson.hpp"
-#include "tile.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -28,7 +28,7 @@ typedef osmium::handler::NodeLocationsForWays<index_pos_type> location_handler_t
 
 typedef rapidjson::Writer<rapidjson::StringBuffer> writer_type;
 
-typedef std::set<std::pair<unsigned int, unsigned int>> tileset_type;
+typedef std::set<osmium::geom::Tile> tileset_type;
 
 class JSONFeature {
 
@@ -121,7 +121,7 @@ public:
             return;
         }
 
-        auto tile = latlon2tile(node.location().lat(), node.location().lon(), m_zoom);
+        osmium::geom::Tile tile(m_zoom, node.location());
 
         if (!m_tiles.empty() && !m_tiles.count(tile)) {
             return;
@@ -139,7 +139,7 @@ public:
         if (!m_tiles.empty()) {
             bool keep = false;
             for (auto ref : way.nodes()) {
-                auto tile = latlon2tile(ref.location().lat(), ref.location().lon(), m_zoom);
+                osmium::geom::Tile tile(m_zoom, ref.location());
                 if (m_tiles.count(tile)) {
                     keep = true;
                     break;
@@ -195,7 +195,7 @@ void print_help() {
               << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n";
 }
 
-tileset_type read_tiles_list(const std::string& filename) {
+tileset_type read_tiles_list(const std::string& filename, int zoom) {
     tileset_type tiles;
     if (!filename.empty()) {
         std::ifstream file(filename);
@@ -203,12 +203,14 @@ tileset_type read_tiles_list(const std::string& filename) {
             std::cerr << "can't open file file\n";
             exit(1);
         }
-        unsigned int x;
-        unsigned int y;
+        uint32_t z;
+        uint32_t x;
+        uint32_t y;
         while (file) {
+            file >> z;
             file >> x;
             file >> y;
-            tiles.insert(std::make_pair(x, y));
+            tiles.emplace(z, x, y);
         }
     }
     return tiles;
@@ -306,7 +308,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Reading from STDIN...\n";
     }
 
-    tileset_type tiles { read_tiles_list(tile_file_name) };
+    tileset_type tiles { read_tiles_list(tile_file_name, zoom) };
 
     osmium::io::Reader reader(input_filename);
 

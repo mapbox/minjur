@@ -20,10 +20,10 @@ include(common)
 
 include_directories(include)
 
-add_executable(minjur minjur.cpp tile.cpp tile.hpp)
+add_executable(minjur minjur.cpp)
 target_link_libraries(minjur ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 
-add_executable(minjur-generate-tilelist minjur-generate-tilelist.cpp tile.cpp tile.hpp)
+add_executable(minjur-generate-tilelist minjur-generate-tilelist.cpp)
 target_link_libraries(minjur-generate-tilelist ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 
 #----------------------------------------------------------------------

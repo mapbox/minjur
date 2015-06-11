@@ -9,10 +9,9 @@
 #include <osmium/visitor.hpp>
 
 #include <osmium/geom/geojson.hpp>
+#include <osmium/geom/tile.hpp>
 #include <osmium/io/any_input.hpp>
 #include <osmium/handler.hpp>
-
-#include "tile.hpp"
 
 typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location> index_type;
 typedef osmium::handler::NodeLocationsForWays<index_type> location_handler_type;
@@ -23,11 +22,11 @@ class TileDiffHandler : public osmium::handler::Handler {
     index_type& m_old_index;
     index_type& m_tmp_index;
 
-    std::set<std::pair<unsigned int, unsigned int>> m_dirty_tiles;
+    std::set<osmium::geom::Tile> m_dirty_tiles;
 
     void add_location(const osmium::Location& location) {
         if (location.valid()) {
-            m_dirty_tiles.insert(latlon2tile(location.lat(), location.lon(), m_zoom));
+            m_dirty_tiles.emplace(m_zoom, location);
         }
     }
 
@@ -65,7 +64,7 @@ public:
 
     void dump_tiles() const {
         for (auto& tile : m_dirty_tiles) {
-            std::cout << tile.first << " " << tile.second << "\n";
+            std::cout << tile.z << " " << tile.x << " " << tile.y << "\n";
         }
     }
 
