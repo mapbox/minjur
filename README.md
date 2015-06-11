@@ -47,17 +47,9 @@ set:
 
     export INDEX_TYPE=sparse
 
-On Linux set
-
-    export INDEX_MAP=mmap
-
-On OS/X or Windows set:
-
-    export INDEX_MAP=map
-
 Then run like this on the old OSM data file:
 
-    minjur -d -l ${INDEX_TYPE}_${INDEX_MAP}_array OLD_OSMFILE >out.geojson
+    minjur -d locations.dump -n ${INDEX_TYPE} OLD_OSMFILE >out.geojson
 
 This will create a file `locations.dump` in addition to `out.geojson`. With
 the change file (usually with suffix `.osc.gz`) you run the following to
@@ -68,7 +60,7 @@ create the tile list:
 Then run `minjur` again with the tile list to create a GeoJSON file with only
 the changes:
 
-    minjur -d -l ${INDEX_TYPE}_${INDEX_MAP}_array -t tiles.list NEW_OSMFILE >changes.geojson
+    minjur -d locations.dump -n ${INDEX_TYPE} -t tiles.list NEW_OSMFILE >changes.geojson
 
 Repeat the last two lines for every change file.
 

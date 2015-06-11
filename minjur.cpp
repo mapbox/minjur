@@ -106,6 +106,7 @@ public:
 
     JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom) :
         m_buffer(),
+        m_geometry_error_count(0),
         m_create_polygons(create_polygons),
         m_tiles(tiles),
         m_zoom(zoom) {
@@ -184,85 +185,20 @@ void print_help() {
               << "If INFILE is not given stdin is assumed.\n" \
               << "Output is always to stdout.\n" \
               << "\nOptions:\n" \
-              << "  -d, --dump                 Dump location store after run\n" \
+              << "  -d, --dump=FILE            Dump location cache to file after run\n" \
               << "  -h, --help                 This help message\n" \
-              << "  -l, --location_store=TYPE  Set location store\n" \
+              << "  -l, --location-store=TYPE  Set location store\n" \
+              << "  -L, --list-location-stores Show available location stores\n" \
+              << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
               << "  -p, --polygons             Create polygons from closed ways\n" \
               << "  -t, --tilefile=FILE        File with tiles to filter\n" \
-              << "  -L                         See available location stores\n" \
               << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n";
 }
 
-int main(int argc, char* argv[]) {
-    const auto& map_factory = osmium::index::MapFactory<osmium::unsigned_object_id_type, osmium::Location>::instance();
-
-    static struct option long_options[] = {
-        {"dump",                 no_argument, 0, 'd'},
-        {"help",                 no_argument, 0, 'h'},
-        {"location_store",       required_argument, 0, 'l'},
-        {"list_location_stores", no_argument, 0, 'L'},
-        {"polygons",             no_argument, 0, 'p'},
-        {"tilefile",             required_argument, 0, 't'},
-        {"zoom",                 required_argument, 0, 'z'},
-        {0, 0, 0, 0}
-    };
-
-    std::string location_store { "sparse_mem_array" };
-    std::string tile_file_name;
-    bool dump = false;
-    bool create_polygons = false;
-    int zoom = 15;
-
-    while (true) {
-        int c = getopt_long(argc, argv, "dhl:Lpt:z:", long_options, 0);
-        if (c == -1) {
-            break;
-        }
-
-        switch (c) {
-            case 'h':
-                print_help();
-                exit(0);
-            case 'd':
-                dump = true;
-                break;
-            case 't':
-                tile_file_name = optarg;
-                break;
-            case 'p':
-                create_polygons = true;
-                break;
-            case 'l':
-                location_store = optarg;
-                break;
-            case 'L':
-                std::cout << "Available map types:\n";
-                for (const auto& map_type : map_factory.map_types()) {
-                    std::cout << "  " << map_type << "\n";
-                }
-                exit(0);
-            case 'z':
-                zoom = atoi(optarg);
-                break;
-            default:
-                exit(1);
-        }
-    }
-
-    std::string input_filename;
-    int remaining_args = argc - optind;
-    if (remaining_args > 1) {
-        std::cerr << "Usage: " << argv[0] << " [OPTIONS] [INFILE]" << std::endl;
-        exit(1);
-    } else if (remaining_args == 1) {
-        input_filename =  argv[optind];
-    } else {
-        input_filename = "-";
-    }
-
+tileset_type read_tiles_list(const std::string& filename) {
     tileset_type tiles;
-    if (!tile_file_name.empty()) {
-        std::ifstream file(tile_file_name);
+    if (!filename.empty()) {
+        std::ifstream file(filename);
         if (! file.is_open()) {
             std::cerr << "can't open file file\n";
             exit(1);
@@ -275,6 +211,102 @@ int main(int argc, char* argv[]) {
             tiles.insert(std::make_pair(x, y));
         }
     }
+    return tiles;
+}
+
+int main(int argc, char* argv[]) {
+    const auto& map_factory = osmium::index::MapFactory<osmium::unsigned_object_id_type, osmium::Location>::instance();
+
+    static struct option long_options[] = {
+        {"dump",                 required_argument, 0, 'd'},
+        {"help",                       no_argument, 0, 'h'},
+        {"location-store",       required_argument, 0, 'l'},
+        {"list-location-stores",       no_argument, 0, 'L'},
+        {"nodes",                required_argument, 0, 'n'},
+        {"polygons",                   no_argument, 0, 'p'},
+        {"tilefile",             required_argument, 0, 't'},
+        {"zoom",                 required_argument, 0, 'z'},
+        {0, 0, 0, 0}
+    };
+
+    std::string location_store;
+    std::string locations_dump_file;
+    std::string tile_file_name;
+    bool create_polygons = false;
+    int zoom = 15;
+    bool nodes_dense = false;
+
+    while (true) {
+        int c = getopt_long(argc, argv, "d:hl:Ln:pt:z:", long_options, 0);
+        if (c == -1) {
+            break;
+        }
+
+        switch (c) {
+            case 'd':
+                locations_dump_file = optarg;
+                break;
+            case 'h':
+                print_help();
+                exit(0);
+            case 'l':
+                location_store = optarg;
+                break;
+            case 'L':
+                std::cout << "Available map types:\n";
+                for (const auto& map_type : map_factory.map_types()) {
+                    std::cout << "  " << map_type << "\n";
+                }
+                exit(0);
+            case 'n':
+                if (!strcmp(optarg, "sparse")) {
+                    nodes_dense = false;
+                } else if (!strcmp(optarg, "dense")) {
+                    nodes_dense = true;
+                } else {
+                    std::cerr << "Set --nodes, -n to 'sparse' or 'dense'\n";
+                    exit(1);
+                }
+                break;
+            case 'p':
+                create_polygons = true;
+                break;
+            case 't':
+                tile_file_name = optarg;
+                break;
+            case 'z':
+                zoom = atoi(optarg);
+                break;
+            default:
+                exit(1);
+        }
+    }
+
+    if (location_store.empty()) {
+        location_store = nodes_dense ? "dense" : "sparse";
+
+        if (map_factory.has_map_type(location_store + "_mmap_array")) {
+            location_store.append("_mmap_array");
+        } else {
+            location_store.append("_mem_array");
+        }
+    }
+    std::cerr << "Using the '" << location_store << "' location store. Use -l or -n to change this.\n";
+
+    std::string input_filename;
+    int remaining_args = argc - optind;
+    if (remaining_args > 1) {
+        std::cerr << "Usage: " << argv[0] << " [OPTIONS] [INFILE]" << std::endl;
+        exit(1);
+    } else if (remaining_args == 1) {
+        input_filename = argv[optind];
+        std::cerr << "Reading from '" << input_filename << "'...\n";
+    } else {
+        input_filename = "-";
+        std::cerr << "Reading from STDIN...\n";
+    }
+
+    tileset_type tiles { read_tiles_list(tile_file_name) };
 
     osmium::io::Reader reader(input_filename);
 
@@ -288,15 +320,17 @@ int main(int argc, char* argv[]) {
     reader.close();
 
     if (json_handler.geometry_error_count()) {
-        std::cerr << "Geometry error count: " << json_handler.geometry_error_count() << "\n";
+        std::cerr << "Number of geometry errors (not written to output): " << json_handler.geometry_error_count() << "\n";
     }
 
     google::protobuf::ShutdownProtobufLibrary();
 
-    if (dump) {
-        int locations_fd = open("locations.dump", O_WRONLY | O_CREAT, 0644);
+    if (!locations_dump_file.empty()) {
+        std::cerr << "Writing locations store to '" << locations_dump_file << "'...\n";
+        int locations_fd = open(locations_dump_file.c_str(), O_WRONLY | O_CREAT, 0644);
         if (locations_fd < 0) {
-            throw std::system_error(errno, std::system_category(), "Open failed");
+            std::cerr << "Can not open file: " << strerror(errno) << "\n";
+            exit(1);
         }
         if (location_store.substr(0, 5) == "dense") {
             index_pos->dump_as_array(locations_fd);
@@ -305,5 +339,7 @@ int main(int argc, char* argv[]) {
         }
         close(locations_fd);
     }
+
+    std::cerr << "Done.\n";
 }
 

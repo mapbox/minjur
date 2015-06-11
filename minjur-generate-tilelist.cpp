@@ -77,7 +77,8 @@ void print_help() {
               << "\nOptions:\n" \
               << "  -h, --help                 This help message\n" \
               << "  -l, --location_store=TYPE  Set location store\n" \
-              << "  -L                         See available location stores\n" \
+              << "  -L, --list-location-stores Show available location stores\n" \
+              << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
               << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n";
 }
 
@@ -88,16 +89,19 @@ int main(int argc, char* argv[]) {
         {"help",                       no_argument, 0, 'h'},
         {"location_store",       required_argument, 0, 'l'},
         {"list_location_stores",       no_argument, 0, 'L'},
+        {"nodes",                required_argument, 0, 'n'},
         {"zoom",                 required_argument, 0, 'z'},
         {0, 0, 0, 0}
     };
 
     std::string input_filename = "-";
     std::string location_store = "sparse_file_array,locations.dump";
+    std::string locations_dump_file;
+    bool nodes_dense = false;
     int zoom = 15;
 
     while (true) {
-        int c = getopt_long(argc, argv, "hl:Lp", long_options, 0);
+        int c = getopt_long(argc, argv, "hl:Ln:z", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -115,6 +119,16 @@ int main(int argc, char* argv[]) {
                     std::cout << "  " << map_type << "\n";
                 }
                 exit(0);
+            case 'n':
+                if (!strcmp(optarg, "sparse")) {
+                    nodes_dense = false;
+                } else if (!strcmp(optarg, "dense")) {
+                    nodes_dense = true;
+                } else {
+                    std::cerr << "Set --nodes, -n to 'sparse' or 'dense'\n";
+                    exit(1);
+                }
+                break;
             case 'z':
                 zoom = atoi(optarg);
                 break;
@@ -123,14 +137,23 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    if (location_store.empty()) {
+        location_store = nodes_dense ? "dense" : "sparse";
+        location_store.append("_file_array");
+    }
+
+    std::cerr << "Using the '" << location_store << "' location store. Use -l or -n to change this.\n";
+
     int remaining_args = argc - optind;
     if (remaining_args > 1) {
         std::cerr << "Usage: " << argv[0] << " [OPTIONS] OSM-CHANGE-FILE\n";
         exit(1);
     } else if (remaining_args == 1) {
-        input_filename =  argv[optind];
+        input_filename = argv[optind];
+        std::cerr << "Reading from '" << input_filename << "'...\n";
     } else {
         input_filename = "-";
+        std::cerr << "Reading from STDIN...\n";
     }
 
     osmium::io::File input_file(input_filename);
