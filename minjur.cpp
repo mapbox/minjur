@@ -165,11 +165,12 @@ public:
                 feature.add_tags(way.tags(), "_osm_way_id", way.id());
                 feature.append_to(m_buffer);
             }
-
-            maybe_flush();
         } catch (osmium::geometry_error&) {
             ++m_geometry_error_count;
+        } catch (osmium::invalid_location&) {
+            ++m_geometry_error_count;
         }
+        maybe_flush();
     }
 
     int geometry_error_count() const {
