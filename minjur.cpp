@@ -59,13 +59,30 @@ public:
         m_factory.create_polygon(way);
     }
 
-    void add_tags(const osmium::TagList& tags, const char* id_name, osmium::object_id_type id) {
+    void add_properties(const osmium::OSMObject& object, const char* id_name) {
         m_writer.String("properties");
 
         m_writer.StartObject();
+
         m_writer.String(id_name);
-        m_writer.Double(id);
-        for (const auto& tag : tags) {
+        m_writer.Double(object.id());
+
+        m_writer.String("_version");
+        m_writer.Int(object.version());
+
+        m_writer.String("_changeset");
+        m_writer.Int(object.changeset());
+
+        m_writer.String("_uid");
+        m_writer.Int(object.uid());
+
+        m_writer.String("_user");
+        m_writer.String(object.user());
+
+        m_writer.String("_timestamp");
+        m_writer.Int(object.timestamp().seconds_since_epoch());
+
+        for (const auto& tag : object.tags()) {
             m_writer.String(tag.key());
             m_writer.String(tag.value());
         }
@@ -129,7 +146,7 @@ public:
 
         JSONFeature feature;
         feature.add_point(node);
-        feature.add_tags(node.tags(), "_osm_node_id", node.id());
+        feature.add_properties(node, "_osm_node_id");
         feature.append_to(m_buffer);
 
         maybe_flush();
@@ -155,14 +172,14 @@ public:
             {
                 JSONFeature feature;
                 feature.add_linestring(way);
-                feature.add_tags(way.tags(), "_osm_way_id", way.id());
+                feature.add_properties(way, "_osm_way_id");
                 feature.append_to(m_buffer);
             }
 
             if (m_create_polygons && way.is_closed()) {
                 JSONFeature feature;
                 feature.add_polygon(way);
-                feature.add_tags(way.tags(), "_osm_way_id", way.id());
+                feature.add_properties(way, "_osm_way_id");
                 feature.append_to(m_buffer);
             }
         } catch (osmium::geometry_error&) {
