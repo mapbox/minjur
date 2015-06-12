@@ -136,22 +136,22 @@ public:
     }
 
     void way(const osmium::Way& way) {
-        if (!m_tiles.empty()) {
-            bool keep = false;
-            for (auto ref : way.nodes()) {
-                osmium::geom::Tile tile(m_zoom, ref.location());
-                if (m_tiles.count(tile)) {
-                    keep = true;
-                    break;
+        try {
+            if (!m_tiles.empty()) {
+                bool keep = false;
+                for (auto ref : way.nodes()) {
+                    osmium::geom::Tile tile(m_zoom, ref.location());
+                    if (m_tiles.count(tile)) {
+                        keep = true;
+                        break;
+                    }
+                }
+
+                if (!keep) {
+                    return;
                 }
             }
 
-            if (!keep) {
-                return;
-            }
-        }
-
-        try {
             {
                 JSONFeature feature;
                 feature.add_linestring(way);
