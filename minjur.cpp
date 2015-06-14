@@ -65,7 +65,7 @@ public:
         m_writer.StartObject();
 
         m_writer.String(id_name);
-        m_writer.Double(object.id());
+        m_writer.Int(object.id());
 
         m_writer.String("_version");
         m_writer.Int(object.version());
