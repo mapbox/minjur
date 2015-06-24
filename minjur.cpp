@@ -5,16 +5,14 @@
 #include <set>
 #include <getopt.h>
 
-#include <osmium/index/map/all.hpp>
-#include <osmium/handler/node_locations_for_ways.hpp>
-#include <osmium/visitor.hpp>
-
 #include <osmium/geom/geojson.hpp>
 #include <osmium/geom/tile.hpp>
-#include <osmium/io/any_input.hpp>
 #include <osmium/handler.hpp>
-
-#include "rapid_geojson.hpp"
+#include <osmium/handler/node_locations_for_ways.hpp>
+#include <osmium/index/map/all.hpp>
+#include <osmium/io/any_input.hpp>
+#include <osmium/geom/rapid_geojson.hpp>
+#include <osmium/visitor.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
