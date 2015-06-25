@@ -8,11 +8,13 @@
 #include <osmium/geom/geojson.hpp>
 #include <osmium/geom/tile.hpp>
 #include <osmium/handler.hpp>
-#include <osmium/handler/node_locations_for_ways.hpp>
-#include <osmium/index/map/all.hpp>
 #include <osmium/io/any_input.hpp>
 #include <osmium/geom/rapid_geojson.hpp>
 #include <osmium/visitor.hpp>
+
+// these must be include in this order
+#include <osmium/index/map/all.hpp>
+#include <osmium/handler/node_locations_for_ways.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
