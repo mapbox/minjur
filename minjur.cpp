@@ -213,7 +213,7 @@ void print_help() {
               << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n";
 }
 
-tileset_type read_tiles_list(const std::string& filename, int zoom) {
+tileset_type read_tiles_list(const std::string& filename) {
     tileset_type tiles;
     if (!filename.empty()) {
         std::ifstream file(filename);
@@ -326,7 +326,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Reading from STDIN...\n";
     }
 
-    tileset_type tiles { read_tiles_list(tile_file_name, zoom) };
+    tileset_type tiles { read_tiles_list(tile_file_name) };
 
     osmium::io::Reader reader(input_filename);
 
