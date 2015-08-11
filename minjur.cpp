@@ -343,8 +343,6 @@ int main(int argc, char* argv[]) {
         std::cerr << "Number of geometry errors (not written to output): " << json_handler.geometry_error_count() << "\n";
     }
 
-    google::protobuf::ShutdownProtobufLibrary();
-
     if (!locations_dump_file.empty()) {
         std::cerr << "Writing locations store to '" << locations_dump_file << "'...\n";
         int locations_fd = open(locations_dump_file.c_str(), O_WRONLY | O_CREAT, 0644);
