@@ -106,6 +106,7 @@ class JSONHandler : public osmium::handler::Handler {
     bool m_create_polygons;
     tileset_type m_tiles;
     unsigned int m_zoom;
+    std::unique_ptr<std::ofstream> m_error_stream;
 
     void flush_to_output() {
         auto written = write(1, m_buffer.data(), m_buffer.size());
@@ -119,14 +120,25 @@ class JSONHandler : public osmium::handler::Handler {
         }
     }
 
+    void report_geometry_problem(const osmium::Way& way, const char* error) {
+        ++m_geometry_error_count;
+        if (m_error_stream) {
+            *m_error_stream << way.id() << ":" << error << "\n";
+        }
+    }
+
 public:
 
-    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom) :
+    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom, const std::string& error_file) :
         m_buffer(),
         m_geometry_error_count(0),
         m_create_polygons(create_polygons),
         m_tiles(tiles),
-        m_zoom(zoom) {
+        m_zoom(zoom),
+        m_error_stream(nullptr) {
+        if (!error_file.empty()) {
+            m_error_stream.reset(new std::ofstream(error_file));
+        }
     }
 
     ~JSONHandler() {
@@ -183,9 +195,9 @@ public:
                 feature.append_to(m_buffer);
             }
         } catch (osmium::geometry_error&) {
-            ++m_geometry_error_count;
+            report_geometry_problem(way, "geometry_error");
         } catch (osmium::invalid_location&) {
-            ++m_geometry_error_count;
+            report_geometry_problem(way, "invalid_location");
         }
         maybe_flush();
     }
@@ -204,6 +216,7 @@ void print_help() {
               << "Output is always to stdout.\n" \
               << "\nOptions:\n" \
               << "  -d, --dump=FILE            Dump location cache to file after run\n" \
+              << "  -e, --error-file=FILE      Write errors to file\n" \
               << "  -h, --help                 This help message\n" \
               << "  -l, --location-store=TYPE  Set location store\n" \
               << "  -L, --list-location-stores Show available location stores\n" \
@@ -239,6 +252,7 @@ int main(int argc, char* argv[]) {
 
     static struct option long_options[] = {
         {"dump",                 required_argument, 0, 'd'},
+        {"error-file",           required_argument, 0, 'e'},
         {"help",                       no_argument, 0, 'h'},
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
@@ -251,13 +265,14 @@ int main(int argc, char* argv[]) {
 
     std::string location_store;
     std::string locations_dump_file;
+    std::string error_file;
     std::string tile_file_name;
     bool create_polygons = false;
     int zoom = 15;
     bool nodes_dense = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "d:hl:Ln:pt:z:", long_options, 0);
+        int c = getopt_long(argc, argv, "d:e:hl:Ln:pt:z:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -265,6 +280,9 @@ int main(int argc, char* argv[]) {
         switch (c) {
             case 'd':
                 locations_dump_file = optarg;
+                break;
+            case 'e':
+                error_file = optarg;
                 break;
             case 'h':
                 print_help();
@@ -334,7 +352,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index_pos);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(create_polygons, tiles, zoom);
+    JSONHandler json_handler(create_polygons, tiles, zoom, error_file);
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();
