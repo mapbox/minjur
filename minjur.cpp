@@ -127,6 +127,17 @@ class JSONHandler : public osmium::handler::Handler {
         }
     }
 
+    std::pair<bool, bool> linestring_and_or_polygon(const osmium::Way& way) const {
+        bool output_as_linestring = true;
+        bool output_as_polygon = false;
+
+        if (way.is_closed()) {
+            output_as_polygon = true;
+        }
+
+        return std::make_pair(output_as_linestring, output_as_polygon);
+    }
+
 public:
 
     JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom, const std::string& error_file) :
@@ -181,14 +192,19 @@ public:
                 }
             }
 
-            {
+            std::pair<bool, bool> l_p = { true, false };
+            if (m_create_polygons) {
+                l_p =linestring_and_or_polygon(way);
+            }
+
+            if (l_p.first) { // output as linestring
                 JSONFeature feature;
                 feature.add_linestring(way);
                 feature.add_properties(way, "_osm_way_id");
                 feature.append_to(m_buffer);
             }
 
-            if (m_create_polygons && way.is_closed()) {
+            if (l_p.second) { // output as polygon
                 JSONFeature feature;
                 feature.add_polygon(way);
                 feature.add_properties(way, "_osm_way_id");
