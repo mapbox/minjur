@@ -3,6 +3,7 @@
 
 Osmium-based converter of OSM data to GeoJSON.
 
+[![Build Status](https://secure.travis-ci.org/mapbox/minjur.png)](https://travis-ci.org/mapbox/minjur)
 
 ## Prerequisites
 
