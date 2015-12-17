@@ -7,7 +7,7 @@ Osmium-based converter of OSM data to GeoJSON.
 
 ## Prerequisites
 
-You need [libosmium](https://github.com/osmcode/libosmium) installed.
+You need [libosmium](https://github.com/osmcode/libosmium) and Boost installed.
 
 
 ## Compile

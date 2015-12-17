@@ -34,9 +34,11 @@ addons:
     apt:
         sources:
             - ubuntu-toolchain-r-test
+            - boost-latest
         packages:
             - g++-4.8
             - gcc-4.8
+            - libboost1.55-dev
 
 install:
     - git clone --quiet --depth 1 https://github.com/osmcode/libosmium.git ../libosmium

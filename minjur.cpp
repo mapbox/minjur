@@ -11,6 +11,8 @@
 #include <osmium/io/any_input.hpp>
 #include <osmium/geom/rapid_geojson.hpp>
 #include <osmium/visitor.hpp>
+#include <osmium/tags/filter.hpp>
+#include <osmium/tags/taglist.hpp>
 
 // these must be include in this order
 #include <osmium/index/map/all.hpp>
@@ -107,6 +109,7 @@ class JSONHandler : public osmium::handler::Handler {
     tileset_type m_tiles;
     unsigned int m_zoom;
     std::unique_ptr<std::ofstream> m_error_stream;
+    osmium::tags::KeyValueFilter m_filter;
 
     void flush_to_output() {
         auto written = write(1, m_buffer.data(), m_buffer.size());
@@ -131,7 +134,8 @@ class JSONHandler : public osmium::handler::Handler {
         bool output_as_linestring = true;
         bool output_as_polygon = false;
 
-        if (way.is_closed()) {
+        if (way.is_closed() && osmium::tags::match_any_of(way.tags(), m_filter)) {
+            output_as_linestring = false;
             output_as_polygon = true;
         }
 
@@ -146,7 +150,105 @@ public:
         m_create_polygons(create_polygons),
         m_tiles(tiles),
         m_zoom(zoom),
-        m_error_stream(nullptr) {
+        m_error_stream(nullptr),
+        m_filter(false) {
+
+        m_filter.add(false, "aeroway", "gate");
+        m_filter.add(false, "aeroway", "taxiway");
+        m_filter.add(true, "aeroway");
+
+        m_filter.add(false, "amenity", "atm");
+        m_filter.add(false, "amenity", "bbq");
+        m_filter.add(false, "amenity", "bench");
+        m_filter.add(false, "amenity", "bureau_de_change");
+        m_filter.add(false, "amenity", "clock");
+        m_filter.add(false, "amenity", "drinking_water");
+        m_filter.add(false, "amenity", "grit_bin");
+        m_filter.add(false, "amenity", "parking_entrance");
+        m_filter.add(false, "amenity", "post_box");
+        m_filter.add(false, "amenity", "telephone");
+        m_filter.add(false, "amenity", "vending_machine");
+        m_filter.add(false, "amenity", "waste_basket");
+        m_filter.add(true, "amenity");
+
+        m_filter.add(true, "area");
+
+        m_filter.add(true, "area:highway");
+
+        m_filter.add(false, "building", "entrance");
+        m_filter.add(false, "building", "no");
+        m_filter.add(true, "building");
+
+        m_filter.add(true, "craft");
+
+        m_filter.add(false, "emergency", "fire_hydrant");
+        m_filter.add(false, "emergency", "phone");
+        m_filter.add(true, "emergency");
+
+        m_filter.add(false, "golf", "hole");
+        m_filter.add(true, "golf");
+
+        m_filter.add(false, "historic", "boundary_stone");
+        m_filter.add(true, "historic");
+
+        m_filter.add(false, "junction", "roundabout");
+        m_filter.add(true, "junction");
+
+        m_filter.add(true, "landuse");
+
+        m_filter.add(false, "leisure", "picnic_table");
+        m_filter.add(false, "leisure", "track");
+        m_filter.add(false, "leisure", "slipway");
+        m_filter.add(true, "leisure");
+
+        m_filter.add(false, "man_made", "cutline");
+        m_filter.add(false, "man_made", "embankment");
+        m_filter.add(false, "man_made", "flagpole");
+        m_filter.add(false, "man_made", "mast");
+        m_filter.add(false, "man_made", "petroleum_well");
+        m_filter.add(false, "man_made", "pipeline");
+        m_filter.add(false, "man_made", "survey_point");
+        m_filter.add(true, "man_made");
+
+        m_filter.add(true, "military");
+
+        m_filter.add(false, "natural", "coastline");
+        m_filter.add(false, "natural", "peak");
+        m_filter.add(false, "natural", "saddle");
+        m_filter.add(false, "natural", "spring");
+        m_filter.add(false, "natural", "tree");
+        m_filter.add(false, "natural", "tree_row");
+        m_filter.add(false, "natural", "volcano");
+        m_filter.add(true, "natural");
+
+        m_filter.add(true, "office");
+
+        m_filter.add(true, "piste:type");
+
+        m_filter.add(true, "place");
+
+        m_filter.add(false, "power", "line");
+        m_filter.add(false, "power", "minor_line");
+        m_filter.add(false, "power", "pole");
+        m_filter.add(false, "power", "tower");
+        m_filter.add(true, "power");
+
+        m_filter.add(false, "public_transport", "stop_position");
+        m_filter.add(true, "public_transport");
+
+        m_filter.add(true, "shop");
+
+        m_filter.add(false, "tourism", "viewpoint");
+        m_filter.add(true, "tourism");
+
+        m_filter.add(false, "waterway", "canal");
+        m_filter.add(false, "waterway", "ditch");
+        m_filter.add(false, "waterway", "drain");
+        m_filter.add(false, "waterway", "river");
+        m_filter.add(false, "waterway", "stream");
+        m_filter.add(false, "waterway", "weir");
+        m_filter.add(true, "waterway");
+
         if (!error_file.empty()) {
             m_error_stream.reset(new std::ofstream(error_file));
         }
