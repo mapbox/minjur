@@ -26,4 +26,7 @@ target_link_libraries(minjur ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 add_executable(minjur-generate-tilelist minjur-generate-tilelist.cpp)
 target_link_libraries(minjur-generate-tilelist ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
 
+add_executable(minjur-mp minjur-mp.cpp)
+target_link_libraries(minjur-mp ${Boost_LIBRARIES} ${OSMIUM_LIBRARIES})
+
 #----------------------------------------------------------------------
