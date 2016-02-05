@@ -69,6 +69,27 @@ For planet updates, you'll need at least 25GB RAM for the node location cache,
 on OS/X and Windows it could be twice that!
 
 
+## Experimental version with multipolygon support
+
+There is an experimental version called `minjur-mp` that has multipolygon
+support. It does not support updates, that's why it doesn't have all the
+options the `minjur` program has.
+
+Run like this:
+
+    minjur-mp OSMFILE >out.geojson
+
+Call with `--help` to see command line options.
+
+The output will have GeoJSON objects for all the tagged nodes first and then,
+in no particular order, the GeoJSON LineString objects (generated from ways)
+and the MultiPolygon objects (generated from multipolygon relations and closed
+ways).
+
+Note that this version of the program will run much longer, generating the
+multipolygons is rather slow.
+
+
 ## Name
 
 This project is named after the town of Minjur in India which I know nothing

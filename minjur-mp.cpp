@@ -124,8 +124,7 @@ public:
 /* ================================================== */
 
 void print_help() {
-    std::cout << "minjur [OPTIONS] [INFILE]\n\n" \
-              << "If INFILE is not given stdin is assumed.\n" \
+    std::cout << "minjur [OPTIONS] INFILE\n\n" \
               << "Output is always to stdout.\n" \
               << "\nOptions:\n" \
               << "  -e, --error-file=FILE      Write errors to file\n" \
@@ -207,17 +206,13 @@ int main(int argc, char* argv[]) {
 
     std::string input_filename;
     int remaining_args = argc - optind;
-    if (remaining_args > 1) {
-        std::cerr << "Usage: " << argv[0] << " [OPTIONS] [INFILE]" << std::endl;
-        exit(1);
-    } else if (remaining_args == 1) {
+    if (remaining_args == 1) {
         input_filename = argv[optind];
         std::cerr << "Reading from '" << input_filename << "'...\n";
     } else {
-        input_filename = "-";
-        std::cerr << "Reading from STDIN...\n";
+        std::cerr << "Usage: " << argv[0] << " [OPTIONS] INFILE\n";
+        exit(1);
     }
-
 
     osmium::area::Assembler::config_type assembler_config;
     osmium::area::MultipolygonCollector<osmium::area::Assembler> collector(assembler_config);
