@@ -11,7 +11,6 @@
 #include <osmium/geom/tile.hpp>
 #include <osmium/handler.hpp>
 #include <osmium/io/any_input.hpp>
-#include <osmium/geom/rapid_geojson.hpp>
 #include <osmium/visitor.hpp>
 #include <osmium/tags/filter.hpp>
 #include <osmium/tags/taglist.hpp>
@@ -20,85 +19,11 @@
 #include <osmium/index/map/all.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
-#pragma GCC diagnostic pop
+#include "json_feature.hpp"
 
 typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
 
 typedef osmium::handler::NodeLocationsForWays<index_pos_type> location_handler_type;
-
-typedef rapidjson::Writer<rapidjson::StringBuffer> writer_type;
-
-class JSONFeature {
-
-    rapidjson::StringBuffer m_stream;
-    writer_type m_writer;
-    osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
-
-public:
-
-    JSONFeature() :
-        m_stream(),
-        m_writer(m_stream),
-        m_factory(m_writer) {
-        m_writer.StartObject();
-        m_writer.String("type");
-        m_writer.String("Feature");
-    }
-
-    void add_point(const osmium::Node& node) {
-        m_factory.create_point(node);
-    }
-
-    void add_linestring(const osmium::Way& way) {
-        m_factory.create_linestring(way);
-    }
-
-    void add_multipolygon(const osmium::Area& area) {
-        m_factory.create_multipolygon(area);
-    }
-
-    void add_properties(const osmium::OSMObject& object, const char* id_name) {
-        m_writer.String("properties");
-
-        m_writer.StartObject();
-
-        m_writer.String(id_name);
-        m_writer.Int64(object.id());
-
-        m_writer.String("_version");
-        m_writer.Int(object.version());
-
-        m_writer.String("_changeset");
-        m_writer.Int(object.changeset());
-
-        m_writer.String("_uid");
-        m_writer.Int(object.uid());
-
-        m_writer.String("_user");
-        m_writer.String(object.user());
-
-        m_writer.String("_timestamp");
-        m_writer.Int(object.timestamp().seconds_since_epoch());
-
-        for (const auto& tag : object.tags()) {
-            m_writer.String(tag.key());
-            m_writer.String(tag.value());
-        }
-        m_writer.EndObject();
-    }
-
-    void append_to(std::string& buffer) {
-        m_writer.EndObject();
-
-        buffer.append(m_stream.GetString(), m_stream.GetSize());
-        buffer.append(1, '\n');
-    }
-
-}; // class JSONFeature
 
 
 class JSONHandler : public osmium::handler::Handler {
@@ -122,7 +47,7 @@ class JSONHandler : public osmium::handler::Handler {
     void report_geometry_problem(const osmium::OSMObject& object, const char* error) {
         ++m_geometry_error_count;
         if (m_error_stream) {
-            *m_error_stream << object.id() << ":" << error << "\n";
+            *m_error_stream << osmium::item_type_to_char(object.type()) << object.id() << ":" << error << "\n";
         }
     }
 
