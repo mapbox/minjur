@@ -31,6 +31,7 @@ class JSONHandler : public osmium::handler::Handler {
     std::string m_buffer;
     int m_geometry_error_count;
     std::unique_ptr<std::ofstream> m_error_stream;
+    std::string m_attr_prefix;
 
     void flush_to_output() {
         auto written = write(1, m_buffer.data(), m_buffer.size());
@@ -53,13 +54,14 @@ class JSONHandler : public osmium::handler::Handler {
 
 public:
 
-    JSONHandler(const std::string& error_file) :
+    JSONHandler(const std::string& error_file, const std::string& attr_prefix) :
         m_buffer(),
         m_geometry_error_count(0),
         m_error_stream(nullptr) {
         if (!error_file.empty()) {
             m_error_stream.reset(new std::ofstream(error_file));
         }
+        m_attr_prefix = attr_prefix;
     }
 
     ~JSONHandler() {
@@ -72,9 +74,9 @@ public:
         }
 
         try {
-            JSONFeature feature;
+            JSONFeature feature(m_attr_prefix);
             feature.add_point(node);
-            feature.add_properties(node, "_osm_node_id");
+            feature.add_properties(node);
             feature.append_to(m_buffer);
         } catch (osmium::geometry_error&) {
             report_geometry_problem(node, "geometry_error");
@@ -87,9 +89,9 @@ public:
 
     void way(const osmium::Way& way) {
         try {
-            JSONFeature feature;
+            JSONFeature feature(m_attr_prefix);
             feature.add_linestring(way);
-            feature.add_properties(way, "_osm_way_id");
+            feature.add_properties(way);
             feature.append_to(m_buffer);
         } catch (osmium::geometry_error&) {
             report_geometry_problem(way, "geometry_error");
@@ -102,9 +104,9 @@ public:
 
     void area(const osmium::Area& area) {
         try {
-            JSONFeature feature;
+            JSONFeature feature(m_attr_prefix);
             feature.add_multipolygon(area);
-            feature.add_properties(area, "_osm_area_id");
+            feature.add_properties(area);
             feature.append_to(m_buffer);
         } catch (osmium::geometry_error&) {
             report_geometry_problem(area, "geometry_error");
@@ -131,7 +133,8 @@ void print_help() {
               << "  -h, --help                 This help message\n" \
               << "  -l, --location-store=TYPE  Set location store\n" \
               << "  -L, --list-location-stores Show available location stores\n" \
-              << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n";
+              << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
+              << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes\n";
 }
 
 
@@ -145,16 +148,18 @@ int main(int argc, char* argv[]) {
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
         {"nodes",                required_argument, 0, 'n'},
+        {"attr-prefix",          required_argument, 0, 'a'},
         {0, 0, 0, 0}
     };
 
     std::string location_store;
     std::string locations_dump_file;
     std::string error_file;
+    std::string attr_prefix;
     bool nodes_dense = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "d:e:hl:Ln:", long_options, 0);
+        int c = getopt_long(argc, argv, "d:e:hl:Ln:a:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -188,10 +193,18 @@ int main(int argc, char* argv[]) {
                     exit(1);
                 }
                 break;
+            case 'a':
+                attr_prefix = optarg;
+                break;
             default:
                 exit(1);
         }
     }
+
+    if (attr_prefix == "") {
+        attr_prefix = "@";
+    }
+
 
     if (location_store.empty()) {
         location_store = nodes_dense ? "dense" : "sparse";
@@ -228,7 +241,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index_pos);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(error_file);
+    JSONHandler json_handler(error_file, attr_prefix);
 
     std::cerr << "Pass 2...\n";
     osmium::io::Reader reader2(input_filename);
@@ -260,4 +273,3 @@ int main(int argc, char* argv[]) {
 
     std::cerr << "Done.\n";
 }
-

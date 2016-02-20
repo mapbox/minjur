@@ -35,6 +35,7 @@ class JSONHandler : public osmium::handler::Handler {
     unsigned int m_zoom;
     std::unique_ptr<std::ofstream> m_error_stream;
     osmium::tags::KeyValueFilter m_filter;
+    std::string m_attr_prefix;
 
     void flush_to_output() {
         auto written = write(1, m_buffer.data(), m_buffer.size());
@@ -69,13 +70,14 @@ class JSONHandler : public osmium::handler::Handler {
 
 public:
 
-    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom, const std::string& error_file) :
+    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom, const std::string& error_file, const std::string& attr_prefix) :
         m_buffer(),
         m_geometry_error_count(0),
         m_create_polygons(create_polygons),
         m_tiles(tiles),
         m_zoom(zoom),
         m_error_stream(nullptr),
+        m_attr_prefix(attr_prefix),
         m_filter(false) {
 
         m_filter.add(false, "aeroway", "gate");
@@ -194,9 +196,9 @@ public:
             return;
         }
 
-        JSONFeature feature;
+        JSONFeature feature(m_attr_prefix);
         feature.add_point(node);
-        feature.add_properties(node, "_osm_node_id");
+        feature.add_properties(node);
         feature.append_to(m_buffer);
 
         maybe_flush();
@@ -225,16 +227,16 @@ public:
             }
 
             if (l_p.first) { // output as linestring
-                JSONFeature feature;
+                JSONFeature feature(m_attr_prefix);
                 feature.add_linestring(way);
-                feature.add_properties(way, "_osm_way_id");
+                feature.add_properties(way);
                 feature.append_to(m_buffer);
             }
 
             if (l_p.second) { // output as polygon
-                JSONFeature feature;
+                JSONFeature feature(m_attr_prefix);
                 feature.add_polygon(way);
-                feature.add_properties(way, "_osm_way_id");
+                feature.add_properties(way);
                 feature.append_to(m_buffer);
             }
         } catch (osmium::geometry_error&) {
@@ -265,7 +267,8 @@ void print_help() {
               << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
               << "  -p, --polygons             Create polygons from closed ways\n" \
               << "  -t, --tilefile=FILE        File with tiles to filter\n" \
-              << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n";
+              << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n" \
+              << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes\n";
 }
 
 tileset_type read_tiles_list(const std::string& filename) {
@@ -302,6 +305,7 @@ int main(int argc, char* argv[]) {
         {"polygons",                   no_argument, 0, 'p'},
         {"tilefile",             required_argument, 0, 't'},
         {"zoom",                 required_argument, 0, 'z'},
+        {"attr-prefix",          required_argument, 0, 'a'},
         {0, 0, 0, 0}
     };
 
@@ -309,12 +313,13 @@ int main(int argc, char* argv[]) {
     std::string locations_dump_file;
     std::string error_file;
     std::string tile_file_name;
+    std::string attr_prefix;
     bool create_polygons = false;
     int zoom = 15;
     bool nodes_dense = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "d:e:hl:Ln:pt:z:", long_options, 0);
+        int c = getopt_long(argc, argv, "d:e:hl:Ln:pt:z:a:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -357,11 +362,18 @@ int main(int argc, char* argv[]) {
             case 'z':
                 zoom = atoi(optarg);
                 break;
+            case 'a':
+                attr_prefix = optarg;
+                break;
             default:
                 exit(1);
         }
     }
 
+    if (attr_prefix == "") {
+        attr_prefix = "@";
+    }
+    
     if (location_store.empty()) {
         location_store = nodes_dense ? "dense" : "sparse";
 
@@ -371,6 +383,7 @@ int main(int argc, char* argv[]) {
             location_store.append("_mem_array");
         }
     }
+
     std::cerr << "Using the '" << location_store << "' location store. Use -l or -n to change this.\n";
 
     std::string input_filename;
@@ -391,7 +404,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index_pos);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(create_polygons, tiles, zoom, error_file);
+    JSONHandler json_handler(create_polygons, tiles, zoom, error_file, attr_prefix);
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();
@@ -417,4 +430,3 @@ int main(int argc, char* argv[]) {
 
     std::cerr << "Done.\n";
 }
-

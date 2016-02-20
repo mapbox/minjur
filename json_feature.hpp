@@ -18,16 +18,18 @@ class JSONFeature {
     rapidjson::StringBuffer m_stream;
     writer_type m_writer;
     osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
+    std::string m_attr_prefix;
 
 public:
 
-    JSONFeature() :
+    JSONFeature(const std::string& attr_prefix) :
         m_stream(),
         m_writer(m_stream),
         m_factory(m_writer) {
         m_writer.StartObject();
         m_writer.String("type");
         m_writer.String("Feature");
+        m_attr_prefix = attr_prefix;
     }
 
     void add_point(const osmium::Node& node) {
@@ -46,9 +48,8 @@ public:
         m_factory.create_multipolygon(area);
     }
 
-    void add_properties(const osmium::OSMObject& object, const char* id_name);
+    void add_properties(const osmium::OSMObject& object);
 
     void append_to(std::string& buffer);
 
 }; // class JSONFeature
-
