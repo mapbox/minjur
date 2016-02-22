@@ -20,7 +20,7 @@ void JSONFeature::add_properties(const osmium::OSMObject& object) {
         m_writer.String(osmium::item_type_to_name(object.type()));
     }
 
-    m_writer.String((m_attr_prefix + "vesion").c_str());
+    m_writer.String((m_attr_prefix + "version").c_str());
     m_writer.Int(object.version());
 
     m_writer.String((m_attr_prefix + "changeset").c_str());
