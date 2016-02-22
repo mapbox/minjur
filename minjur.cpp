@@ -34,8 +34,8 @@ class JSONHandler : public osmium::handler::Handler {
     tileset_type m_tiles;
     unsigned int m_zoom;
     std::unique_ptr<std::ofstream> m_error_stream;
+    std::string m_attr_prefix = "@";
     osmium::tags::KeyValueFilter m_filter;
-    std::string m_attr_prefix;
 
     void flush_to_output() {
         auto written = write(1, m_buffer.data(), m_buffer.size());
@@ -268,7 +268,7 @@ void print_help() {
               << "  -p, --polygons             Create polygons from closed ways\n" \
               << "  -t, --tilefile=FILE        File with tiles to filter\n" \
               << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n" \
-              << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes\n";
+              << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes, defaults to '@'\n";
 }
 
 tileset_type read_tiles_list(const std::string& filename) {
@@ -373,7 +373,7 @@ int main(int argc, char* argv[]) {
     if (attr_prefix == "") {
         attr_prefix = "@";
     }
-    
+
     if (location_store.empty()) {
         location_store = nodes_dense ? "dense" : "sparse";
 

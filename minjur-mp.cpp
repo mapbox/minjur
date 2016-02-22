@@ -30,8 +30,8 @@ class JSONHandler : public osmium::handler::Handler {
 
     std::string m_buffer;
     int m_geometry_error_count;
-    std::unique_ptr<std::ofstream> m_error_stream;
     std::string m_attr_prefix;
+    std::unique_ptr<std::ofstream> m_error_stream;
 
     void flush_to_output() {
         auto written = write(1, m_buffer.data(), m_buffer.size());
@@ -57,11 +57,11 @@ public:
     JSONHandler(const std::string& error_file, const std::string& attr_prefix) :
         m_buffer(),
         m_geometry_error_count(0),
+        m_attr_prefix(attr_prefix),
         m_error_stream(nullptr) {
         if (!error_file.empty()) {
             m_error_stream.reset(new std::ofstream(error_file));
         }
-        m_attr_prefix = attr_prefix;
     }
 
     ~JSONHandler() {
@@ -134,7 +134,7 @@ void print_help() {
               << "  -l, --location-store=TYPE  Set location store\n" \
               << "  -L, --list-location-stores Show available location stores\n" \
               << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
-              << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes\n";
+              << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes, defaults to '@'\n";
 }
 
 

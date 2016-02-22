@@ -25,11 +25,11 @@ public:
     JSONFeature(const std::string& attr_prefix) :
         m_stream(),
         m_writer(m_stream),
-        m_factory(m_writer) {
+        m_factory(m_writer),
+        m_attr_prefix(attr_prefix) {
         m_writer.StartObject();
         m_writer.String("type");
         m_writer.String("Feature");
-        m_attr_prefix = attr_prefix;
     }
 
     void add_point(const osmium::Node& node) {
