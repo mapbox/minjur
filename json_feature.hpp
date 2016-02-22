@@ -4,6 +4,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#define RAPIDJSON_HAS_STDSTRING 1
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 #pragma GCC diagnostic pop
