@@ -11,7 +11,7 @@ void JSONFeature::add_properties(const osmium::OSMObject& object) {
 
     m_writer.String(m_attr_prefix + "type");
     if (object.type() == osmium::item_type::area) {
-        if ((object.positive_id() & 0x1) == 0) {
+        if (static_cast<const osmium::Area&>(object).from_way()) {
             m_writer.String("way");
         } else {
             m_writer.String("relation");
