@@ -19,11 +19,10 @@
 
 #include "json_feature.hpp"
 
-typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
+using index_type = osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location>;
+using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
-typedef osmium::handler::NodeLocationsForWays<index_pos_type> location_handler_type;
-
-typedef std::set<osmium::geom::Tile> tileset_type;
+using tileset_type = std::set<osmium::geom::Tile>;
 
 
 class JSONHandler : public osmium::handler::Handler {
@@ -396,8 +395,8 @@ int main(int argc, char* argv[]) {
 
     osmium::io::Reader reader(input_filename);
 
-    std::unique_ptr<index_pos_type> index_pos = map_factory.create_map(location_store);
-    location_handler_type location_handler(*index_pos);
+    std::unique_ptr<index_type> index = map_factory.create_map(location_store);
+    location_handler_type location_handler(*index);
     location_handler.ignore_errors();
 
     JSONHandler json_handler(create_polygons, tiles, zoom, error_file, attr_prefix);
@@ -417,9 +416,9 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
         if (location_store.substr(0, 5) == "dense") {
-            index_pos->dump_as_array(locations_fd);
+            index->dump_as_array(locations_fd);
         } else {
-            index_pos->dump_as_list(locations_fd);
+            index->dump_as_list(locations_fd);
         }
         close(locations_fd);
     }

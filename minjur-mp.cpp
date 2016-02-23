@@ -21,10 +21,8 @@
 
 #include "json_feature.hpp"
 
-typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location> index_pos_type;
-
-typedef osmium::handler::NodeLocationsForWays<index_pos_type> location_handler_type;
-
+using index_type = osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location>;
+using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
 class JSONHandler : public osmium::handler::Handler {
 
@@ -142,7 +140,6 @@ int main(int argc, char* argv[]) {
     const auto& map_factory = osmium::index::MapFactory<osmium::unsigned_object_id_type, osmium::Location>::instance();
 
     static struct option long_options[] = {
-        {"dump",                 required_argument, 0, 'd'},
         {"error-file",           required_argument, 0, 'e'},
         {"help",                       no_argument, 0, 'h'},
         {"location-store",       required_argument, 0, 'l'},
@@ -153,21 +150,17 @@ int main(int argc, char* argv[]) {
     };
 
     std::string location_store;
-    std::string locations_dump_file;
     std::string error_file;
     std::string attr_prefix = "@";
     bool nodes_dense = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "d:e:hl:Ln:a:", long_options, 0);
+        int c = getopt_long(argc, argv, "e:hl:Ln:a:", long_options, 0);
         if (c == -1) {
             break;
         }
 
         switch (c) {
-            case 'd':
-                locations_dump_file = optarg;
-                break;
             case 'e':
                 error_file = optarg;
                 break;
@@ -232,8 +225,8 @@ int main(int argc, char* argv[]) {
     std::cerr << "Pass 1 done\n";
 
 
-    std::unique_ptr<index_pos_type> index_pos = map_factory.create_map(location_store);
-    location_handler_type location_handler(*index_pos);
+    std::unique_ptr<index_type> index = map_factory.create_map(location_store);
+    location_handler_type location_handler(*index);
     location_handler.ignore_errors();
 
     JSONHandler json_handler(error_file, attr_prefix);
@@ -249,21 +242,6 @@ int main(int argc, char* argv[]) {
 
     if (json_handler.geometry_error_count()) {
         std::cerr << "Number of geometry errors (not written to output): " << json_handler.geometry_error_count() << "\n";
-    }
-
-    if (!locations_dump_file.empty()) {
-        std::cerr << "Writing locations store to '" << locations_dump_file << "'...\n";
-        int locations_fd = open(locations_dump_file.c_str(), O_WRONLY | O_CREAT, 0644);
-        if (locations_fd < 0) {
-            std::cerr << "Can not open file: " << strerror(errno) << "\n";
-            exit(1);
-        }
-        if (location_store.substr(0, 5) == "dense") {
-            index_pos->dump_as_array(locations_fd);
-        } else {
-            index_pos->dump_as_list(locations_fd);
-        }
-        close(locations_fd);
     }
 
     std::cerr << "Done.\n";
