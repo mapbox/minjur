@@ -33,7 +33,7 @@ class JSONHandler : public osmium::handler::Handler {
     tileset_type m_tiles;
     unsigned int m_zoom;
     std::unique_ptr<std::ofstream> m_error_stream;
-    std::string m_attr_prefix = "@";
+    attribute_names m_attr_names;
     osmium::tags::KeyValueFilter m_filter;
 
     void flush_to_output() {
@@ -76,7 +76,7 @@ public:
         m_tiles(tiles),
         m_zoom(zoom),
         m_error_stream(nullptr),
-        m_attr_prefix(attr_prefix),
+        m_attr_names(attr_prefix),
         m_filter(false) {
 
         m_filter.add(false, "aeroway", "gate");
@@ -195,7 +195,7 @@ public:
             return;
         }
 
-        JSONFeature feature(m_attr_prefix);
+        JSONFeature feature(m_attr_names);
         feature.add_point(node);
         feature.add_properties(node);
         feature.append_to(m_buffer);
@@ -226,14 +226,14 @@ public:
             }
 
             if (l_p.first) { // output as linestring
-                JSONFeature feature(m_attr_prefix);
+                JSONFeature feature(m_attr_names);
                 feature.add_linestring(way);
                 feature.add_properties(way);
                 feature.append_to(m_buffer);
             }
 
             if (l_p.second) { // output as polygon
-                JSONFeature feature(m_attr_prefix);
+                JSONFeature feature(m_attr_names);
                 feature.add_polygon(way);
                 feature.add_properties(way);
                 feature.append_to(m_buffer);

@@ -28,7 +28,7 @@ class JSONHandler : public osmium::handler::Handler {
 
     std::string m_buffer;
     int m_geometry_error_count;
-    std::string m_attr_prefix;
+    attribute_names m_attr_names;
     std::unique_ptr<std::ofstream> m_error_stream;
 
     void flush_to_output() {
@@ -55,7 +55,7 @@ public:
     JSONHandler(const std::string& error_file, const std::string& attr_prefix) :
         m_buffer(),
         m_geometry_error_count(0),
-        m_attr_prefix(attr_prefix),
+        m_attr_names(attr_prefix),
         m_error_stream(nullptr) {
         if (!error_file.empty()) {
             m_error_stream.reset(new std::ofstream(error_file));
@@ -72,7 +72,7 @@ public:
         }
 
         try {
-            JSONFeature feature(m_attr_prefix);
+            JSONFeature feature(m_attr_names);
             feature.add_point(node);
             feature.add_properties(node);
             feature.append_to(m_buffer);
@@ -87,7 +87,7 @@ public:
 
     void way(const osmium::Way& way) {
         try {
-            JSONFeature feature(m_attr_prefix);
+            JSONFeature feature(m_attr_names);
             feature.add_linestring(way);
             feature.add_properties(way);
             feature.append_to(m_buffer);
@@ -102,7 +102,7 @@ public:
 
     void area(const osmium::Area& area) {
         try {
-            JSONFeature feature(m_attr_prefix);
+            JSONFeature feature(m_attr_names);
             feature.add_multipolygon(area);
             feature.add_properties(area);
             feature.append_to(m_buffer);

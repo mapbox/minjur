@@ -12,6 +12,29 @@
 #include <osmium/geom/rapid_geojson.hpp>
 #include <osmium/osm.hpp>
 
+struct attribute_names {
+
+    std::string id;
+    std::string type;
+    std::string version;
+    std::string changeset;
+    std::string uid;
+    std::string user;
+    std::string timestamp;
+
+    attribute_names(const std::string& prefix) :
+        id(prefix + "id"),
+        type(prefix + "type"),
+        version(prefix + "version"),
+        changeset(prefix + "changeset"),
+        uid(prefix + "uid"),
+        user(prefix + "user"),
+        timestamp(prefix + "timestamp") {
+    }
+
+}; // struct attribute_names
+
+
 using writer_type = rapidjson::Writer<rapidjson::StringBuffer>;
 
 class JSONFeature {
@@ -19,15 +42,15 @@ class JSONFeature {
     rapidjson::StringBuffer m_stream;
     writer_type m_writer;
     osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
-    std::string m_attr_prefix;
+    const attribute_names& m_attr_names;
 
 public:
 
-    JSONFeature(const std::string& attr_prefix) :
+    JSONFeature(const attribute_names& attr_names) :
         m_stream(),
         m_writer(m_stream),
         m_factory(m_writer),
-        m_attr_prefix(attr_prefix) {
+        m_attr_names(attr_names) {
         m_writer.StartObject();
         m_writer.String("type");
         m_writer.String("Feature");
