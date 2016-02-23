@@ -313,7 +313,7 @@ int main(int argc, char* argv[]) {
     std::string locations_dump_file;
     std::string error_file;
     std::string tile_file_name;
-    std::string attr_prefix;
+    std::string attr_prefix = "@";
     bool create_polygons = false;
     int zoom = 15;
     bool nodes_dense = false;
@@ -368,10 +368,6 @@ int main(int argc, char* argv[]) {
             default:
                 exit(1);
         }
-    }
-
-    if (attr_prefix == "") {
-        attr_prefix = "@";
     }
 
     if (location_store.empty()) {
