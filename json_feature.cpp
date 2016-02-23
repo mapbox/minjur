@@ -1,6 +1,11 @@
 
 #include "json_feature.hpp"
 
+void JSONFeature::add_id(const std::string& prefix, osmium::object_id_type id) {
+    m_writer.String("id");
+    m_writer.String(prefix + std::to_string(id));
+}
+
 void JSONFeature::add_properties(const osmium::OSMObject& object) {
     m_writer.String("properties");
 

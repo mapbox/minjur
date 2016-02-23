@@ -72,6 +72,8 @@ public:
         m_factory.create_multipolygon(area);
     }
 
+    void add_id(const std::string& prefix, osmium::object_id_type id);
+
     void add_properties(const osmium::OSMObject& object);
 
     void append_to(std::string& buffer);

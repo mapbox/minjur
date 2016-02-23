@@ -32,8 +32,9 @@ class JSONHandler : public osmium::handler::Handler {
     bool m_create_polygons;
     tileset_type m_tiles;
     unsigned int m_zoom;
-    std::unique_ptr<std::ofstream> m_error_stream;
     attribute_names m_attr_names;
+    bool m_with_id;
+    std::unique_ptr<std::ofstream> m_error_stream;
     osmium::tags::KeyValueFilter m_filter;
 
     void flush_to_output() {
@@ -69,14 +70,15 @@ class JSONHandler : public osmium::handler::Handler {
 
 public:
 
-    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom, const std::string& error_file, const std::string& attr_prefix) :
+    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom, const std::string& error_file, const std::string& attr_prefix, bool with_id) :
         m_buffer(),
         m_geometry_error_count(0),
         m_create_polygons(create_polygons),
         m_tiles(tiles),
         m_zoom(zoom),
-        m_error_stream(nullptr),
         m_attr_names(attr_prefix),
+        m_with_id(with_id),
+        m_error_stream(nullptr),
         m_filter(false) {
 
         m_filter.add(false, "aeroway", "gate");
@@ -196,6 +198,9 @@ public:
         }
 
         JSONFeature feature(m_attr_names);
+        if (m_with_id) {
+            feature.add_id("n", node.id());
+        }
         feature.add_point(node);
         feature.add_properties(node);
         feature.append_to(m_buffer);
@@ -227,6 +232,9 @@ public:
 
             if (l_p.first) { // output as linestring
                 JSONFeature feature(m_attr_names);
+                if (m_with_id) {
+                    feature.add_id("wl", way.id());
+                }
                 feature.add_linestring(way);
                 feature.add_properties(way);
                 feature.append_to(m_buffer);
@@ -234,6 +242,9 @@ public:
 
             if (l_p.second) { // output as polygon
                 JSONFeature feature(m_attr_names);
+                if (m_with_id) {
+                    feature.add_id("wp", way.id());
+                }
                 feature.add_polygon(way);
                 feature.add_properties(way);
                 feature.append_to(m_buffer);
@@ -261,6 +272,7 @@ void print_help() {
               << "  -d, --dump=FILE            Dump location cache to file after run\n" \
               << "  -e, --error-file=FILE      Write errors to file\n" \
               << "  -h, --help                 This help message\n" \
+              << "  -i, --with-id              Add unique id to each feature\n" \
               << "  -l, --location-store=TYPE  Set location store\n" \
               << "  -L, --list-location-stores Show available location stores\n" \
               << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
@@ -298,6 +310,7 @@ int main(int argc, char* argv[]) {
         {"dump",                 required_argument, 0, 'd'},
         {"error-file",           required_argument, 0, 'e'},
         {"help",                       no_argument, 0, 'h'},
+        {"with-id",                    no_argument, 0, 'i'},
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
         {"nodes",                required_argument, 0, 'n'},
@@ -316,9 +329,10 @@ int main(int argc, char* argv[]) {
     bool create_polygons = false;
     int zoom = 15;
     bool nodes_dense = false;
+    bool with_id = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "d:e:hl:Ln:pt:z:a:", long_options, 0);
+        int c = getopt_long(argc, argv, "d:e:hil:Ln:pt:z:a:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -333,6 +347,9 @@ int main(int argc, char* argv[]) {
             case 'h':
                 print_help();
                 exit(0);
+            case 'i':
+                with_id = true;
+                break;
             case 'l':
                 location_store = optarg;
                 break;
@@ -399,7 +416,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(create_polygons, tiles, zoom, error_file, attr_prefix);
+    JSONHandler json_handler(create_polygons, tiles, zoom, error_file, attr_prefix, with_id);
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();

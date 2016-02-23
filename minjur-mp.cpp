@@ -29,6 +29,7 @@ class JSONHandler : public osmium::handler::Handler {
     std::string m_buffer;
     int m_geometry_error_count;
     attribute_names m_attr_names;
+    bool m_with_id;
     std::unique_ptr<std::ofstream> m_error_stream;
 
     void flush_to_output() {
@@ -52,10 +53,11 @@ class JSONHandler : public osmium::handler::Handler {
 
 public:
 
-    JSONHandler(const std::string& error_file, const std::string& attr_prefix) :
+    JSONHandler(const std::string& error_file, const std::string& attr_prefix, bool with_id) :
         m_buffer(),
         m_geometry_error_count(0),
         m_attr_names(attr_prefix),
+        m_with_id(with_id),
         m_error_stream(nullptr) {
         if (!error_file.empty()) {
             m_error_stream.reset(new std::ofstream(error_file));
@@ -73,6 +75,9 @@ public:
 
         try {
             JSONFeature feature(m_attr_names);
+            if (m_with_id) {
+                feature.add_id("n", node.id());
+            }
             feature.add_point(node);
             feature.add_properties(node);
             feature.append_to(m_buffer);
@@ -88,6 +93,9 @@ public:
     void way(const osmium::Way& way) {
         try {
             JSONFeature feature(m_attr_names);
+            if (m_with_id) {
+                feature.add_id("w", way.id());
+            }
             feature.add_linestring(way);
             feature.add_properties(way);
             feature.append_to(m_buffer);
@@ -103,6 +111,9 @@ public:
     void area(const osmium::Area& area) {
         try {
             JSONFeature feature(m_attr_names);
+            if (m_with_id) {
+                feature.add_id("a", area.id());
+            }
             feature.add_multipolygon(area);
             feature.add_properties(area);
             feature.append_to(m_buffer);
@@ -129,6 +140,7 @@ void print_help() {
               << "\nOptions:\n" \
               << "  -e, --error-file=FILE      Write errors to file\n" \
               << "  -h, --help                 This help message\n" \
+              << "  -i, --with-id              Add unique id to each feature\n" \
               << "  -l, --location-store=TYPE  Set location store\n" \
               << "  -L, --list-location-stores Show available location stores\n" \
               << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
@@ -142,6 +154,7 @@ int main(int argc, char* argv[]) {
     static struct option long_options[] = {
         {"error-file",           required_argument, 0, 'e'},
         {"help",                       no_argument, 0, 'h'},
+        {"with-id",                    no_argument, 0, 'i'},
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
         {"nodes",                required_argument, 0, 'n'},
@@ -153,9 +166,10 @@ int main(int argc, char* argv[]) {
     std::string error_file;
     std::string attr_prefix = "@";
     bool nodes_dense = false;
+    bool with_id = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "e:hl:Ln:a:", long_options, 0);
+        int c = getopt_long(argc, argv, "e:hil:Ln:a:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -167,6 +181,9 @@ int main(int argc, char* argv[]) {
             case 'h':
                 print_help();
                 exit(0);
+            case 'i':
+                with_id = true;
+                break;
             case 'l':
                 location_store = optarg;
                 break;
@@ -229,7 +246,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(error_file, attr_prefix);
+    JSONHandler json_handler(error_file, attr_prefix, with_id);
 
     std::cerr << "Pass 2...\n";
     osmium::io::Reader reader2(input_filename);
