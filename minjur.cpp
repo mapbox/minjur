@@ -18,6 +18,7 @@
 #include <osmium/handler/node_locations_for_ways.hpp>
 
 #include "json_feature.hpp"
+#include "json_handler.hpp"
 
 using index_type = osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location>;
 using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
@@ -25,36 +26,12 @@ using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 using tileset_type = std::set<osmium::geom::Tile>;
 
 
-class JSONHandler : public osmium::handler::Handler {
+class JSONNoAreaHandler : public JSONHandler {
 
-    std::string m_buffer;
-    int m_geometry_error_count;
     bool m_create_polygons;
     tileset_type m_tiles;
     unsigned int m_zoom;
-    attribute_names m_attr_names;
-    bool m_with_id;
-    std::unique_ptr<std::ofstream> m_error_stream;
     osmium::tags::KeyValueFilter m_filter;
-
-    void flush_to_output() {
-        auto written = write(1, m_buffer.data(), m_buffer.size());
-        assert(written == long(m_buffer.size()));
-        m_buffer.clear();
-    }
-
-    void maybe_flush() {
-        if (m_buffer.size() > 1024*1024) {
-            flush_to_output();
-        }
-    }
-
-    void report_geometry_problem(const osmium::Way& way, const char* error) {
-        ++m_geometry_error_count;
-        if (m_error_stream) {
-            *m_error_stream << way.id() << ":" << error << "\n";
-        }
-    }
 
     std::pair<bool, bool> linestring_and_or_polygon(const osmium::Way& way) const {
         bool output_as_linestring = true;
@@ -70,15 +47,11 @@ class JSONHandler : public osmium::handler::Handler {
 
 public:
 
-    JSONHandler(bool create_polygons, const tileset_type& tiles, unsigned int zoom, const std::string& error_file, const std::string& attr_prefix, bool with_id) :
-        m_buffer(),
-        m_geometry_error_count(0),
+    JSONNoAreaHandler(unsigned int zoom, const std::string& error_file, const std::string& attr_prefix, bool with_id, bool create_polygons, const tileset_type& tiles) :
+        JSONHandler(error_file, attr_prefix, with_id),
         m_create_polygons(create_polygons),
         m_tiles(tiles),
         m_zoom(zoom),
-        m_attr_names(attr_prefix),
-        m_with_id(with_id),
-        m_error_stream(nullptr),
         m_filter(false) {
 
         m_filter.add(false, "aeroway", "gate");
@@ -176,14 +149,6 @@ public:
         m_filter.add(false, "waterway", "stream");
         m_filter.add(false, "waterway", "weir");
         m_filter.add(true, "waterway");
-
-        if (!error_file.empty()) {
-            m_error_stream.reset(new std::ofstream(error_file));
-        }
-    }
-
-    ~JSONHandler() {
-        flush_to_output();
     }
 
     void node(const osmium::Node& node) {
@@ -197,13 +162,13 @@ public:
             return;
         }
 
-        JSONFeature feature(m_attr_names);
-        if (m_with_id) {
+        JSONFeature feature(attr_names());
+        if (with_id()) {
             feature.add_id("n", node.id());
         }
         feature.add_point(node);
         feature.add_properties(node);
-        feature.append_to(m_buffer);
+        feature.append_to(buffer());
 
         maybe_flush();
     }
@@ -231,23 +196,23 @@ public:
             }
 
             if (l_p.first) { // output as linestring
-                JSONFeature feature(m_attr_names);
-                if (m_with_id) {
+                JSONFeature feature(attr_names());
+                if (with_id()) {
                     feature.add_id("wl", way.id());
                 }
                 feature.add_linestring(way);
                 feature.add_properties(way);
-                feature.append_to(m_buffer);
+                feature.append_to(buffer());
             }
 
             if (l_p.second) { // output as polygon
-                JSONFeature feature(m_attr_names);
-                if (m_with_id) {
+                JSONFeature feature(attr_names());
+                if (with_id()) {
                     feature.add_id("wp", way.id());
                 }
                 feature.add_polygon(way);
                 feature.add_properties(way);
-                feature.append_to(m_buffer);
+                feature.append_to(buffer());
             }
         } catch (osmium::geometry_error&) {
             report_geometry_problem(way, "geometry_error");
@@ -257,11 +222,7 @@ public:
         maybe_flush();
     }
 
-    int geometry_error_count() const {
-        return m_geometry_error_count;
-    }
-
-}; // class JSONHandler
+}; // class JSONNoAreaHandler
 
 /* ================================================== */
 
@@ -416,7 +377,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(create_polygons, tiles, zoom, error_file, attr_prefix, with_id);
+    JSONNoAreaHandler json_handler(zoom, error_file, attr_prefix, with_id, create_polygons, tiles);
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();

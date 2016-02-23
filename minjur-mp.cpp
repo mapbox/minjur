@@ -20,52 +20,18 @@
 #include <osmium/handler/node_locations_for_ways.hpp>
 
 #include "json_feature.hpp"
+#include "json_handler.hpp"
 
 using index_type = osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location>;
 using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
-class JSONHandler : public osmium::handler::Handler {
 
-    std::string m_buffer;
-    int m_geometry_error_count;
-    attribute_names m_attr_names;
-    bool m_with_id;
-    std::unique_ptr<std::ofstream> m_error_stream;
-
-    void flush_to_output() {
-        auto written = write(1, m_buffer.data(), m_buffer.size());
-        assert(written == long(m_buffer.size()));
-        m_buffer.clear();
-    }
-
-    void maybe_flush() {
-        if (m_buffer.size() > 1024*1024) {
-            flush_to_output();
-        }
-    }
-
-    void report_geometry_problem(const osmium::OSMObject& object, const char* error) {
-        ++m_geometry_error_count;
-        if (m_error_stream) {
-            *m_error_stream << osmium::item_type_to_char(object.type()) << object.id() << ":" << error << "\n";
-        }
-    }
+class JSONAreaHandler : public JSONHandler {
 
 public:
 
-    JSONHandler(const std::string& error_file, const std::string& attr_prefix, bool with_id) :
-        m_buffer(),
-        m_geometry_error_count(0),
-        m_attr_names(attr_prefix),
-        m_with_id(with_id),
-        m_error_stream(nullptr) {
-        if (!error_file.empty()) {
-            m_error_stream.reset(new std::ofstream(error_file));
-        }
-    }
-
-    ~JSONHandler() {
-        flush_to_output();
+    JSONAreaHandler(const std::string& error_file, const std::string& attr_prefix, bool with_id) :
+        JSONHandler(error_file, attr_prefix, with_id) {
     }
 
     void node(const osmium::Node& node) {
@@ -74,13 +40,13 @@ public:
         }
 
         try {
-            JSONFeature feature(m_attr_names);
-            if (m_with_id) {
+            JSONFeature feature(attr_names());
+            if (with_id()) {
                 feature.add_id("n", node.id());
             }
             feature.add_point(node);
             feature.add_properties(node);
-            feature.append_to(m_buffer);
+            feature.append_to(buffer());
         } catch (osmium::geometry_error&) {
             report_geometry_problem(node, "geometry_error");
         } catch (osmium::invalid_location&) {
@@ -92,13 +58,13 @@ public:
 
     void way(const osmium::Way& way) {
         try {
-            JSONFeature feature(m_attr_names);
-            if (m_with_id) {
+            JSONFeature feature(attr_names());
+            if (with_id()) {
                 feature.add_id("w", way.id());
             }
             feature.add_linestring(way);
             feature.add_properties(way);
-            feature.append_to(m_buffer);
+            feature.append_to(buffer());
         } catch (osmium::geometry_error&) {
             report_geometry_problem(way, "geometry_error");
         } catch (osmium::invalid_location&) {
@@ -110,13 +76,13 @@ public:
 
     void area(const osmium::Area& area) {
         try {
-            JSONFeature feature(m_attr_names);
-            if (m_with_id) {
+            JSONFeature feature(attr_names());
+            if (with_id()) {
                 feature.add_id("a", area.id());
             }
             feature.add_multipolygon(area);
             feature.add_properties(area);
-            feature.append_to(m_buffer);
+            feature.append_to(buffer());
         } catch (osmium::geometry_error&) {
             report_geometry_problem(area, "geometry_error");
         } catch (osmium::invalid_location&) {
@@ -126,11 +92,7 @@ public:
         maybe_flush();
     }
 
-    int geometry_error_count() const {
-        return m_geometry_error_count;
-    }
-
-}; // class JSONHandler
+}; // class JSONAreaHandler
 
 /* ================================================== */
 
@@ -246,7 +208,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler(*index);
     location_handler.ignore_errors();
 
-    JSONHandler json_handler(error_file, attr_prefix, with_id);
+    JSONAreaHandler json_handler(error_file, attr_prefix, with_id);
 
     std::cerr << "Pass 2...\n";
     osmium::io::Reader reader2(input_filename);
