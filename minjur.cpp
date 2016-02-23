@@ -266,19 +266,19 @@ public:
 /* ================================================== */
 
 void print_help() {
-    std::cout << "minjur [OPTIONS] INFILE\n\n" \
-              << "Output is always to stdout.\n" \
-              << "\nOptions:\n" \
-              << "  -d, --dump=FILE            Dump location cache to file after run\n" \
-              << "  -e, --error-file=FILE      Write errors to file\n" \
-              << "  -h, --help                 This help message\n" \
-              << "  -i, --with-id              Add unique id to each feature\n" \
-              << "  -l, --location-store=TYPE  Set location store\n" \
-              << "  -L, --list-location-stores Show available location stores\n" \
-              << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n" \
-              << "  -p, --polygons             Create polygons from closed ways\n" \
-              << "  -t, --tilefile=FILE        File with tiles to filter\n" \
-              << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n" \
+    std::cout << "minjur [OPTIONS] INFILE\n\n"
+              << "Output is always to stdout.\n"
+              << "\nOptions:\n"
+              << "  -d, --dump=FILE            Dump location cache to file after run\n"
+              << "  -e, --error-file=FILE      Write errors to file\n"
+              << "  -h, --help                 This help message\n"
+              << "  -i, --with-id              Add unique id to each feature\n"
+              << "  -l, --location-store=TYPE  Set location store\n"
+              << "  -L, --list-location-stores Show available location stores\n"
+              << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n"
+              << "  -p, --polygons             Create polygons from closed ways\n"
+              << "  -t, --tilefile=FILE        File with tiles to filter\n"
+              << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n"
               << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes, defaults to '@'\n";
 }
 
