@@ -4,6 +4,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#define RAPIDJSON_HAS_STDSTRING 1
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 #pragma GCC diagnostic pop
@@ -18,13 +19,15 @@ class JSONFeature {
     rapidjson::StringBuffer m_stream;
     writer_type m_writer;
     osmium::geom::RapidGeoJSONFactory<writer_type> m_factory;
+    std::string m_attr_prefix;
 
 public:
 
-    JSONFeature() :
+    JSONFeature(const std::string& attr_prefix) :
         m_stream(),
         m_writer(m_stream),
-        m_factory(m_writer) {
+        m_factory(m_writer),
+        m_attr_prefix(attr_prefix) {
         m_writer.StartObject();
         m_writer.String("type");
         m_writer.String("Feature");
@@ -46,9 +49,8 @@ public:
         m_factory.create_multipolygon(area);
     }
 
-    void add_properties(const osmium::OSMObject& object, const char* id_name);
+    void add_properties(const osmium::OSMObject& object);
 
     void append_to(std::string& buffer);
 
 }; // class JSONFeature
-
