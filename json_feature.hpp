@@ -52,7 +52,7 @@ public:
         m_factory(m_writer),
         m_attr_names(attr_names) {
         m_writer.StartObject();
-        m_writer.String("type");
+        m_writer.Key("type");
         m_writer.String("Feature");
     }
 
