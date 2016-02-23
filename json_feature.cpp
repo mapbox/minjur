@@ -48,3 +48,4 @@ void JSONFeature::append_to(std::string& buffer) {
     buffer.append(m_stream.GetString(), m_stream.GetSize());
     buffer.append(1, '\n');
 }
+

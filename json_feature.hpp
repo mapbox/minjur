@@ -54,3 +54,4 @@ public:
     void append_to(std::string& buffer);
 
 }; // class JSONFeature
+

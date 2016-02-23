@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
                 exit(1);
         }
     }
-    
+
     if (location_store.empty()) {
         location_store = nodes_dense ? "dense" : "sparse";
 
@@ -268,3 +268,4 @@ int main(int argc, char* argv[]) {
 
     std::cerr << "Done.\n";
 }
+
