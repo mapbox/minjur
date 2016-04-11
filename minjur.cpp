@@ -156,19 +156,25 @@ public:
             return;
         }
 
-        osmium::geom::Tile tile(m_zoom, node.location());
+        try {
+            osmium::geom::Tile tile(m_zoom, node.location());
 
-        if (!m_tiles.empty() && !m_tiles.count(tile)) {
-            return;
-        }
+            if (!m_tiles.empty() && !m_tiles.count(tile)) {
+                return;
+            }
 
-        JSONFeature feature(attr_names());
-        if (with_id()) {
-            feature.add_id("n", node.id());
+            JSONFeature feature(attr_names());
+            if (with_id()) {
+                feature.add_id("n", node.id());
+            }
+            feature.add_point(node);
+            feature.add_properties(node);
+            feature.append_to(buffer());
+        } catch (osmium::geometry_error&) {
+            report_geometry_problem(node, "geometry_error");
+        } catch (osmium::invalid_location&) {
+            report_geometry_problem(node, "invalid_location");
         }
-        feature.add_point(node);
-        feature.add_properties(node);
-        feature.append_to(buffer());
 
         maybe_flush();
     }
