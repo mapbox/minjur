@@ -180,6 +180,9 @@ public:
     }
 
     void way(const osmium::Way& way) {
+        if (way.nodes().size() <= 1) {
+            return;
+        }
         try {
             if (!m_tiles.empty()) {
                 bool keep = false;

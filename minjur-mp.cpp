@@ -57,6 +57,9 @@ public:
     }
 
     void way(const osmium::Way& way) {
+        if (way.nodes().size() <= 1) {
+            return;
+        }
         try {
             JSONFeature feature(attr_names());
             if (with_id()) {

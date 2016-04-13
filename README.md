@@ -36,6 +36,20 @@ Run like this:
 Call with `--help` to see command line options.
 
 
+## Output
+
+The output will be a (possibly rather large file) with one GeoJSON object
+per line.
+
+Nodes without any tags will not appear in the output. Ways with zero or a
+single node will not appear in the output.
+
+All tags will appear as GeoJSON properties, the object `type`, `id`, `version`,
+`changeset`, `uid`, `user`, and `timestamp` will also be in the properties
+using a leading `@` in the key indicating that this is an attribute, not a
+tag. You can use the `--attr-prefix` or `-a` option to change this prefix.
+
+
 ## Working with updates
 
 If you are working with a planet file or very large extract (a large continent)
