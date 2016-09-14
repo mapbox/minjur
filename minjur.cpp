@@ -1,13 +1,19 @@
 
-#include <iostream>
+#include <cerrno>
+#include <cstdint>
+#include <cstdlib>
+#include <fcntl.h>
+#include <unistd.h>
+#include <cstring>
 #include <fstream>
-#include <cassert>
-#include <set>
 #include <getopt.h>
+#include <iostream>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
 
-#include <osmium/geom/geojson.hpp>
 #include <osmium/geom/tile.hpp>
-#include <osmium/handler.hpp>
 #include <osmium/io/any_input.hpp>
 #include <osmium/visitor.hpp>
 #include <osmium/tags/filter.hpp>
@@ -16,6 +22,7 @@
 // these must be include in this order
 #include <osmium/index/map/all.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
+#include <osmium/osm.hpp>
 
 #include "json_feature.hpp"
 #include "json_handler.hpp"
@@ -157,22 +164,22 @@ public:
         }
 
         try {
-            osmium::geom::Tile tile(m_zoom, node.location());
+            osmium::geom::Tile tile{m_zoom, node.location()};
 
             if (!m_tiles.empty() && !m_tiles.count(tile)) {
                 return;
             }
 
-            JSONFeature feature(attr_names());
+            JSONFeature feature{attr_names()};
             if (with_id()) {
                 feature.add_id("n", node.id());
             }
             feature.add_point(node);
             feature.add_properties(node);
             feature.append_to(buffer());
-        } catch (osmium::geometry_error&) {
+        } catch (const osmium::geometry_error&) {
             report_geometry_problem(node, "geometry_error");
-        } catch (osmium::invalid_location&) {
+        } catch (const osmium::invalid_location&) {
             report_geometry_problem(node, "invalid_location");
         }
 
@@ -187,7 +194,7 @@ public:
             if (!m_tiles.empty()) {
                 bool keep = false;
                 for (auto ref : way.nodes()) {
-                    osmium::geom::Tile tile(m_zoom, ref.location());
+                    osmium::geom::Tile tile{m_zoom, ref.location()};
                     if (m_tiles.count(tile)) {
                         keep = true;
                         break;
@@ -205,7 +212,7 @@ public:
             }
 
             if (l_p.first) { // output as linestring
-                JSONFeature feature(attr_names());
+                JSONFeature feature{attr_names()};
                 if (with_id()) {
                     feature.add_id("wl", way.id());
                 }
@@ -215,7 +222,7 @@ public:
             }
 
             if (l_p.second) { // output as polygon
-                JSONFeature feature(attr_names());
+                JSONFeature feature{attr_names()};
                 if (with_id()) {
                     feature.add_id("wp", way.id());
                 }
@@ -223,9 +230,9 @@ public:
                 feature.add_properties(way);
                 feature.append_to(buffer());
             }
-        } catch (osmium::geometry_error&) {
+        } catch (const osmium::geometry_error&) {
             report_geometry_problem(way, "geometry_error");
-        } catch (osmium::invalid_location&) {
+        } catch (const osmium::invalid_location&) {
             report_geometry_problem(way, "invalid_location");
         }
         maybe_flush();
@@ -255,14 +262,14 @@ void print_help() {
 tileset_type read_tiles_list(const std::string& filename) {
     tileset_type tiles;
     if (!filename.empty()) {
-        std::ifstream file(filename);
+        std::ifstream file{filename};
         if (! file.is_open()) {
             std::cerr << "can't open file file\n";
-            exit(1);
+            std::exit(1);
         }
-        uint32_t z;
-        uint32_t x;
-        uint32_t y;
+        std::uint32_t z;
+        std::uint32_t x;
+        std::uint32_t y;
         while (file) {
             file >> z;
             file >> x;
@@ -297,7 +304,7 @@ int main(int argc, char* argv[]) {
     std::string tile_file_name;
     std::string attr_prefix = "@";
     bool create_polygons = false;
-    int zoom = 15;
+    unsigned int zoom = 15;
     bool nodes_dense = false;
     bool with_id = false;
 
@@ -316,7 +323,7 @@ int main(int argc, char* argv[]) {
                 break;
             case 'h':
                 print_help();
-                exit(0);
+                std::exit(0);
             case 'i':
                 with_id = true;
                 break;
@@ -328,15 +335,15 @@ int main(int argc, char* argv[]) {
                 for (const auto& map_type : map_factory.map_types()) {
                     std::cout << "  " << map_type << "\n";
                 }
-                exit(0);
+                std::exit(0);
             case 'n':
-                if (!strcmp(optarg, "sparse")) {
+                if (!std::strcmp(optarg, "sparse")) {
                     nodes_dense = false;
-                } else if (!strcmp(optarg, "dense")) {
+                } else if (!std::strcmp(optarg, "dense")) {
                     nodes_dense = true;
                 } else {
                     std::cerr << "Set --nodes, -n to 'sparse' or 'dense'\n";
-                    exit(1);
+                    std::exit(1);
                 }
                 break;
             case 'p':
@@ -346,13 +353,13 @@ int main(int argc, char* argv[]) {
                 tile_file_name = optarg;
                 break;
             case 'z':
-                zoom = atoi(optarg);
+                zoom = static_cast<unsigned int>(std::atoi(optarg));
                 break;
             case 'a':
                 attr_prefix = optarg;
                 break;
             default:
-                exit(1);
+                std::exit(1);
         }
     }
 
@@ -369,24 +376,24 @@ int main(int argc, char* argv[]) {
     std::cerr << "Using the '" << location_store << "' location store. Use -l or -n to change this.\n";
 
     std::string input_filename;
-    int remaining_args = argc - optind;
+    const int remaining_args = argc - optind;
     if (remaining_args == 1) {
         input_filename = argv[optind];
         std::cerr << "Reading from '" << input_filename << "'...\n";
     } else {
         std::cerr << "Usage: " << argv[0] << " [OPTIONS] INFILE\n";
-        exit(1);
+        std::exit(1);
     }
 
-    tileset_type tiles { read_tiles_list(tile_file_name) };
+    tileset_type tiles{read_tiles_list(tile_file_name)};
 
-    osmium::io::Reader reader(input_filename);
+    osmium::io::Reader reader{input_filename};
 
     std::unique_ptr<index_type> index = map_factory.create_map(location_store);
-    location_handler_type location_handler(*index);
+    location_handler_type location_handler{*index};
     location_handler.ignore_errors();
 
-    JSONNoAreaHandler json_handler(zoom, error_file, attr_prefix, with_id, create_polygons, tiles);
+    JSONNoAreaHandler json_handler{zoom, error_file, attr_prefix, with_id, create_polygons, tiles};
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();
@@ -397,10 +404,10 @@ int main(int argc, char* argv[]) {
 
     if (!locations_dump_file.empty()) {
         std::cerr << "Writing locations store to '" << locations_dump_file << "'...\n";
-        int locations_fd = open(locations_dump_file.c_str(), O_WRONLY | O_CREAT, 0644);
+        const int locations_fd = open(locations_dump_file.c_str(), O_WRONLY | O_CREAT, 0644);
         if (locations_fd < 0) {
-            std::cerr << "Can not open file: " << strerror(errno) << "\n";
-            exit(1);
+            std::cerr << "Can not open file: " << std::strerror(errno) << "\n";
+            std::exit(1);
         }
         if (location_store.substr(0, 5) == "dense") {
             index->dump_as_array(locations_fd);

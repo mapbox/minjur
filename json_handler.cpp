@@ -1,8 +1,13 @@
 
+#include <cassert>
+#include <unistd.h>
+
+#include <osmium/osm.hpp>
+
 #include "json_handler.hpp"
 
 void JSONHandler::flush_to_output() {
-    auto written = write(1, m_buffer.data(), m_buffer.size());
+    const auto written = write(1, m_buffer.data(), m_buffer.size());
     assert(written == long(m_buffer.size()));
     m_buffer.clear();
 }

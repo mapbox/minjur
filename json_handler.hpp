@@ -2,11 +2,15 @@
 
 #include <fstream>
 #include <memory>
-#include <unistd.h>
+#include <string>
 
 #include <osmium/handler.hpp>
 
 #include "json_feature.hpp"
+
+namespace osmium {
+    class OSMObject;
+}
 
 class JSONHandler : public osmium::handler::Handler {
 

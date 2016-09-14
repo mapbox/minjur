@@ -1,20 +1,23 @@
 
-#include <set>
-#include <utility>
-#include <math.h>
+#include <cstdlib>
+#include <cstring>
 #include <getopt.h>
+#include <iostream>
+#include <memory>
+#include <set>
+#include <string>
 
 #include <osmium/index/map/all.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
 #include <osmium/visitor.hpp>
 
-#include <osmium/geom/geojson.hpp>
 #include <osmium/geom/tile.hpp>
 #include <osmium/io/any_input.hpp>
 #include <osmium/handler.hpp>
+#include <osmium/osm.hpp>
 
-typedef osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location> index_type;
-typedef osmium::handler::NodeLocationsForWays<index_type> location_handler_type;
+using index_type = osmium::index::map::Map<osmium::unsigned_object_id_type, osmium::Location>;
+using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
 class TileDiffHandler : public osmium::handler::Handler {
 
@@ -50,7 +53,7 @@ public:
     }
 
     void way(const osmium::Way& way) {
-        for (auto& node_ref : way.nodes()) {
+        for (const auto& node_ref : way.nodes()) {
             try {
                 add_location(m_old_index.get(node_ref.ref()));
             } catch (...) {
@@ -63,7 +66,7 @@ public:
     }
 
     void dump_tiles() const {
-        for (auto& tile : m_dirty_tiles) {
+        for (const auto& tile : m_dirty_tiles) {
             std::cout << tile.z << " " << tile.x << " " << tile.y << "\n";
         }
     }
@@ -108,7 +111,7 @@ int main(int argc, char* argv[]) {
         switch (c) {
             case 'h':
                 print_help();
-                exit(0);
+                std::exit(0);
             case 'l':
                 location_store = optarg;
                 break;
@@ -117,22 +120,22 @@ int main(int argc, char* argv[]) {
                 for (const auto& map_type : map_factory.map_types()) {
                     std::cout << "  " << map_type << "\n";
                 }
-                exit(0);
+                std::exit(0);
             case 'n':
-                if (!strcmp(optarg, "sparse")) {
+                if (!std::strcmp(optarg, "sparse")) {
                     nodes_dense = false;
-                } else if (!strcmp(optarg, "dense")) {
+                } else if (!std::strcmp(optarg, "dense")) {
                     nodes_dense = true;
                 } else {
                     std::cerr << "Set --nodes, -n to 'sparse' or 'dense'\n";
-                    exit(1);
+                    std::exit(1);
                 }
                 break;
             case 'z':
-                zoom = atoi(optarg);
+                zoom = std::atoi(optarg);
                 break;
             default:
-                exit(1);
+                std::exit(1);
         }
     }
 
@@ -143,10 +146,10 @@ int main(int argc, char* argv[]) {
 
     std::cerr << "Using the '" << location_store << "' location store. Use -l or -n to change this.\n";
 
-    int remaining_args = argc - optind;
+    const int remaining_args = argc - optind;
     if (remaining_args > 1) {
         std::cerr << "Usage: " << argv[0] << " [OPTIONS] OSM-CHANGE-FILE\n";
-        exit(1);
+        std::exit(1);
     } else if (remaining_args == 1) {
         input_filename = argv[optind];
         std::cerr << "Reading from '" << input_filename << "'...\n";
@@ -155,15 +158,14 @@ int main(int argc, char* argv[]) {
         std::cerr << "Reading from STDIN...\n";
     }
 
-    osmium::io::File input_file(input_filename);
-    osmium::io::Reader reader(input_file);
+    osmium::io::Reader reader{input_filename};
 
     std::unique_ptr<index_type> old_index = map_factory.create_map(location_store);
     std::unique_ptr<index_type> tmp_index = map_factory.create_map("sparse_mem_array");
-    location_handler_type location_handler(*tmp_index);
+    location_handler_type location_handler{*tmp_index};
     location_handler.ignore_errors();
 
-    TileDiffHandler tile_diff_handler(zoom, *old_index, *tmp_index);
+    TileDiffHandler tile_diff_handler{zoom, *old_index, *tmp_index};
 
     osmium::apply(reader, location_handler, tile_diff_handler);
     reader.close();

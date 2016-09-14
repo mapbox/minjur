@@ -1,19 +1,18 @@
 
-#include <iostream>
-#include <fstream>
-#include <cassert>
-#include <set>
+#include <cstdlib>
+#include <cstring>
 #include <getopt.h>
+#include <iostream>
+#include <memory>
+#include <string>
 
 #include <osmium/area/assembler.hpp>
 #include <osmium/area/multipolygon_collector.hpp>
-#include <osmium/geom/geojson.hpp>
-#include <osmium/geom/tile.hpp>
-#include <osmium/handler.hpp>
 #include <osmium/io/any_input.hpp>
+#include <osmium/memory/buffer.hpp>
+#include <osmium/osm.hpp>
+#include <osmium/osm/tag.hpp>
 #include <osmium/visitor.hpp>
-#include <osmium/tags/filter.hpp>
-#include <osmium/tags/taglist.hpp>
 
 // these must be include in this order
 #include <osmium/index/map/all.hpp>
@@ -40,16 +39,16 @@ public:
         }
 
         try {
-            JSONFeature feature(attr_names());
+            JSONFeature feature{attr_names()};
             if (with_id()) {
                 feature.add_id("n", node.id());
             }
             feature.add_point(node);
             feature.add_properties(node);
             feature.append_to(buffer());
-        } catch (osmium::geometry_error&) {
+        } catch (const osmium::geometry_error&) {
             report_geometry_problem(node, "geometry_error");
-        } catch (osmium::invalid_location&) {
+        } catch (const osmium::invalid_location&) {
             report_geometry_problem(node, "invalid_location");
         }
 
@@ -61,16 +60,16 @@ public:
             return;
         }
         try {
-            JSONFeature feature(attr_names());
+            JSONFeature feature{attr_names()};
             if (with_id()) {
                 feature.add_id("w", way.id());
             }
             feature.add_linestring(way);
             feature.add_properties(way);
             feature.append_to(buffer());
-        } catch (osmium::geometry_error&) {
+        } catch (const osmium::geometry_error&) {
             report_geometry_problem(way, "geometry_error");
-        } catch (osmium::invalid_location&) {
+        } catch (const osmium::invalid_location&) {
             report_geometry_problem(way, "invalid_location");
         }
 
@@ -79,16 +78,16 @@ public:
 
     void area(const osmium::Area& area) {
         try {
-            JSONFeature feature(attr_names());
+            JSONFeature feature{attr_names()};
             if (with_id()) {
                 feature.add_id("a", area.id());
             }
             feature.add_multipolygon(area);
             feature.add_properties(area);
             feature.append_to(buffer());
-        } catch (osmium::geometry_error&) {
+        } catch (const osmium::geometry_error&) {
             report_geometry_problem(area, "geometry_error");
-        } catch (osmium::invalid_location&) {
+        } catch (const osmium::invalid_location&) {
             report_geometry_problem(area, "invalid_location");
         }
 
@@ -145,7 +144,7 @@ int main(int argc, char* argv[]) {
                 break;
             case 'h':
                 print_help();
-                exit(0);
+                std::exit(0);
             case 'i':
                 with_id = true;
                 break;
@@ -157,22 +156,22 @@ int main(int argc, char* argv[]) {
                 for (const auto& map_type : map_factory.map_types()) {
                     std::cout << "  " << map_type << "\n";
                 }
-                exit(0);
+                std::exit(0);
             case 'n':
-                if (!strcmp(optarg, "sparse")) {
+                if (!std::strcmp(optarg, "sparse")) {
                     nodes_dense = false;
-                } else if (!strcmp(optarg, "dense")) {
+                } else if (!std::strcmp(optarg, "dense")) {
                     nodes_dense = true;
                 } else {
                     std::cerr << "Set --nodes, -n to 'sparse' or 'dense'\n";
-                    exit(1);
+                    std::exit(1);
                 }
                 break;
             case 'a':
                 attr_prefix = optarg;
                 break;
             default:
-                exit(1);
+                std::exit(1);
         }
     }
 
@@ -188,33 +187,33 @@ int main(int argc, char* argv[]) {
     std::cerr << "Using the '" << location_store << "' location store. Use -l or -n to change this.\n";
 
     std::string input_filename;
-    int remaining_args = argc - optind;
+    const int remaining_args = argc - optind;
     if (remaining_args == 1) {
         input_filename = argv[optind];
         std::cerr << "Reading from '" << input_filename << "'...\n";
     } else {
         std::cerr << "Usage: " << argv[0] << " [OPTIONS] INFILE\n";
-        exit(1);
+        std::exit(1);
     }
 
     osmium::area::Assembler::config_type assembler_config;
-    osmium::area::MultipolygonCollector<osmium::area::Assembler> collector(assembler_config);
+    osmium::area::MultipolygonCollector<osmium::area::Assembler> collector{assembler_config};
 
     std::cerr << "Pass 1...\n";
-    osmium::io::Reader reader1(input_filename, osmium::osm_entity_bits::relation);
+    osmium::io::Reader reader1{input_filename, osmium::osm_entity_bits::relation};
     collector.read_relations(reader1);
     reader1.close();
     std::cerr << "Pass 1 done\n";
 
 
     std::unique_ptr<index_type> index = map_factory.create_map(location_store);
-    location_handler_type location_handler(*index);
+    location_handler_type location_handler{*index};
     location_handler.ignore_errors();
 
-    JSONAreaHandler json_handler(error_file, attr_prefix, with_id);
+    JSONAreaHandler json_handler{error_file, attr_prefix, with_id};
 
     std::cerr << "Pass 2...\n";
-    osmium::io::Reader reader2(input_filename);
+    osmium::io::Reader reader2{input_filename};
     osmium::apply(reader2, location_handler, json_handler, collector.handler([&json_handler](osmium::memory::Buffer&& buffer) {
         osmium::apply(buffer, json_handler);
     }));

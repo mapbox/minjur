@@ -1,4 +1,8 @@
 
+#include <string>
+
+#include <osmium/osm/tag.hpp>
+
 #include "json_feature.hpp"
 
 void JSONFeature::add_id(const std::string& prefix, osmium::object_id_type id) {
