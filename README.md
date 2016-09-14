@@ -31,10 +31,23 @@ Compile with
 
 Run like this:
 
-    minjur OSMFILE >out.geojson
+    minjur [OPTIONS] OSMFILE >out.geojson
 
 Call with `--help` to see command line options.
 
+Options:
+
+    -d, --dump=FILE            Dump location cache to file after run
+    -e, --error-file=FILE      Write errors to file
+    -h, --help                 This help message
+    -i, --with-id              Add unique id to each feature
+    -l, --location-store=TYPE  Set location store
+    -L, --list-location-stores Show available location stores
+    -n, --nodes=sparse|dense   Are node IDs sparse or dense?
+    -p, --polygons             Create polygons from closed ways
+    -t, --tilefile=FILE        File with tiles to filter
+    -z, --zoom=ZOOM            Zoom level for tiles (default: 15)
+    -a, --attr-prefix=PREFIX   Optional prefix for attributes, defaults to '@'
 
 ## Output
 
@@ -82,6 +95,21 @@ Repeat the last two lines for every change file.
 For planet updates, you'll need at least 25GB RAM for the node location cache,
 on OS/X and Windows it could be twice that!
 
+## minjur-generate-tilelist
+
+Run like this:
+
+    minjur-generate-tilelist [OPTIONS] OSM-CHANGE-FILE
+
+Output is always to stdout.
+
+Options:
+
+    -h, --help                 This help message
+    -l, --location_store=TYPE  Set location store
+    -L, --list-location-stores Show available location stores
+    -n, --nodes=sparse|dense   Are node IDs sparse or dense?
+    -z, --zoom=ZOOM            Zoom level for tiles (default: 15)
 
 ## Experimental version with multipolygon support
 
@@ -91,9 +119,19 @@ options the `minjur` program has.
 
 Run like this:
 
-    minjur-mp OSMFILE >out.geojson
+    minjur-mp [OPTIONS] OSMFILE >out.geojson
 
 Call with `--help` to see command line options.
+
+Options:
+
+    -e, --error-file=FILE      Write errors to file
+    -h, --help                 This help message
+    -i, --with-id              Add unique id to each feature
+    -l, --location-store=TYPE  Set location store
+    -L, --list-location-stores Show available location stores
+    -n, --nodes=sparse|dense   Are node IDs sparse or dense?
+    -a, --attr-prefix=PREFIX   Optional prefix for attributes, defaults to '@'
 
 The output will have GeoJSON objects for all the tagged nodes first and then,
 in no particular order, the GeoJSON LineString objects (generated from ways)
