@@ -8,6 +8,7 @@
 
 #include <osmium/area/assembler.hpp>
 #include <osmium/area/multipolygon_collector.hpp>
+#include <osmium/handler/check_order.hpp>
 #include <osmium/io/any_input.hpp>
 #include <osmium/memory/buffer.hpp>
 #include <osmium/osm.hpp>
@@ -211,10 +212,11 @@ int main(int argc, char* argv[]) {
     location_handler.ignore_errors();
 
     JSONAreaHandler json_handler{error_file, attr_prefix, with_id};
+    osmium::handler::CheckOrder check_order_handler;
 
     std::cerr << "Pass 2...\n";
     osmium::io::Reader reader2{input_filename};
-    osmium::apply(reader2, location_handler, json_handler, collector.handler([&json_handler](osmium::memory::Buffer&& buffer) {
+    osmium::apply(reader2, check_order_handler, location_handler, json_handler, collector.handler([&json_handler](osmium::memory::Buffer&& buffer) {
         osmium::apply(buffer, json_handler);
     }));
     reader2.close();
