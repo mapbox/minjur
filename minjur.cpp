@@ -250,6 +250,7 @@ void print_help() {
               << "  -d, --dump=FILE            Dump location cache to file after run\n"
               << "  -e, --error-file=FILE      Write errors to file\n"
               << "  -h, --help                 This help message\n"
+              << "  -v, --version              Display version\n"
               << "  -i, --with-id              Add unique id to each feature\n"
               << "  -l, --location-store=TYPE  Set location store\n"
               << "  -L, --list-location-stores Show available location stores\n"
@@ -315,7 +316,7 @@ int main(int argc, char* argv[]) {
     bool with_id = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "d:e:hil:Ln:pt:z:a:", long_options, 0);
+        int c = getopt_long(argc, argv, "d:e:hivl:Ln:pt:z:a:", long_options, 0);
         if (c == -1) {
             break;
         }

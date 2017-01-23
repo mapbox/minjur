@@ -106,7 +106,7 @@ void print_help() {
               << "\nOptions:\n"
               << "  -e, --error-file=FILE      Write errors to file\n"
               << "  -h, --help                 This help message\n"
-              << "  -v, --version                 Display version\n"
+              << "  -v, --version              Display version\n"
               << "  -i, --with-id              Add unique id to each feature\n"
               << "  -l, --location-store=TYPE  Set location store\n"
               << "  -L, --list-location-stores Show available location stores\n"
@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
     bool with_id = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "e:hil:Ln:a:", long_options, 0);
+        int c = getopt_long(argc, argv, "e:hivl:Ln:a:", long_options, 0);
         if (c == -1) {
             break;
         }
