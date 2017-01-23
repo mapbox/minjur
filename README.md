@@ -5,27 +5,25 @@ Osmium-based converter of OSM data to GeoJSON.
 
 [![Build Status](https://secure.travis-ci.org/mapbox/minjur.png)](https://travis-ci.org/mapbox/minjur)
 
-## Prerequisites
+## Installing
 
-You need [libosmium](https://github.com/osmcode/libosmium) and Boost installed.
+It is recommended that you install minjur from binaries using mason:
 
+```bash
+$ mkdir mason && curl -sSfL https://github.com/mapbox/mason/archive/v0.6.0.tar.gz | tar --gunzip --extract --strip-components=1 --directory=./mason
+$ ./mason/mason install minjur 0.1.0
+$ ./mason/mason link minjur 0.1.0
+$ ./mason_packages/.link/bin/minjur --version
+0.1.0
+```
 
-## Compile
+If you need to source compile then you'll need `libosmium` headers available. Then you build minjur with `cmake`:
 
-To setup:
 
     mkdir build
     cd build
     cmake ..
-
-Usually this should do the trick. If you need more configuration call
-
-    ccmake .
-
-Compile with
-
     make
-
 
 ## Run
 
