@@ -24,6 +24,7 @@
 #include <osmium/handler/node_locations_for_ways.hpp>
 #include <osmium/osm.hpp>
 
+#include "minjur_version.hpp"
 #include "json_feature.hpp"
 #include "json_handler.hpp"
 
@@ -280,6 +281,10 @@ tileset_type read_tiles_list(const std::string& filename) {
     return tiles;
 }
 
+void print_version() {
+    std::cout << MINJUR_VERSION_STRING << "\n";
+}
+
 int main(int argc, char* argv[]) {
     const auto& map_factory = osmium::index::MapFactory<osmium::unsigned_object_id_type, osmium::Location>::instance();
 
@@ -287,6 +292,7 @@ int main(int argc, char* argv[]) {
         {"dump",                 required_argument, 0, 'd'},
         {"error-file",           required_argument, 0, 'e'},
         {"help",                       no_argument, 0, 'h'},
+        {"version",                    no_argument, 0, 'v'},
         {"with-id",                    no_argument, 0, 'i'},
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
@@ -323,6 +329,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'h':
                 print_help();
+                std::exit(0);
+            case 'v':
+                print_version();
                 std::exit(0);
             case 'i':
                 with_id = true;

@@ -19,6 +19,7 @@
 #include <osmium/index/map/all.hpp>
 #include <osmium/handler/node_locations_for_ways.hpp>
 
+#include "minjur_version.hpp"
 #include "json_feature.hpp"
 #include "json_handler.hpp"
 
@@ -105,6 +106,7 @@ void print_help() {
               << "\nOptions:\n"
               << "  -e, --error-file=FILE      Write errors to file\n"
               << "  -h, --help                 This help message\n"
+              << "  -v, --version                 Display version\n"
               << "  -i, --with-id              Add unique id to each feature\n"
               << "  -l, --location-store=TYPE  Set location store\n"
               << "  -L, --list-location-stores Show available location stores\n"
@@ -112,6 +114,9 @@ void print_help() {
               << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes, defaults to '@'\n";
 }
 
+void print_version() {
+    std::cout << MINJUR_VERSION_STRING << "\n";
+}
 
 int main(int argc, char* argv[]) {
     const auto& map_factory = osmium::index::MapFactory<osmium::unsigned_object_id_type, osmium::Location>::instance();
@@ -119,6 +124,7 @@ int main(int argc, char* argv[]) {
     static struct option long_options[] = {
         {"error-file",           required_argument, 0, 'e'},
         {"help",                       no_argument, 0, 'h'},
+        {"version",                    no_argument, 0, 'v'},
         {"with-id",                    no_argument, 0, 'i'},
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
@@ -145,6 +151,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'h':
                 print_help();
+                std::exit(0);
+            case 'v':
+                print_version();
                 std::exit(0);
             case 'i':
                 with_id = true;
