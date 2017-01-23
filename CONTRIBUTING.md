@@ -9,6 +9,7 @@ To release a new minjur version:
    - minjur_version.hpp
    - README.md
  - Update CHANGELOG.md
+ - Make a git tag: `git tag v${VERSION} -a -m "v${VERSION}" && git push --tags`
  - Go to https://github.com/mapbox/minjur/releases
    and edit the new release. Put "Version x.y.z" in title and
    cut-and-paste entry from CHANGELOG.md.
