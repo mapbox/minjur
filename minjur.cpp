@@ -80,6 +80,7 @@ public:
         m_filter.add(false, "amenity", "waste_basket");
         m_filter.add(true, "amenity");
 
+        m_filter.add(false, "area", "no");
         m_filter.add(true, "area");
 
         m_filter.add(true, "area:highway");
