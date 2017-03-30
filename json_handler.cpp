@@ -1,5 +1,6 @@
 
 #include <cassert>
+#include <map>
 #include <unistd.h>
 
 #include <osmium/osm.hpp>

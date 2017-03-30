@@ -1,5 +1,6 @@
 
 #include <string>
+#include <map>
 
 #include <osmium/osm/tag.hpp>
 
@@ -11,6 +12,10 @@ void JSONFeature::add_id(const std::string& prefix, osmium::object_id_type id) {
 }
 
 void JSONFeature::add_properties(const osmium::OSMObject& object) {
+    add_properties(object, std::map<std::string, std::string>());
+}
+
+void JSONFeature::add_properties(const osmium::OSMObject& object, std::map<std::string, std::string> others) {
     m_writer.Key("properties");
 
     m_writer.StartObject();
@@ -48,6 +53,12 @@ void JSONFeature::add_properties(const osmium::OSMObject& object) {
         m_writer.String(tag.key());
         m_writer.String(tag.value());
     }
+
+    for (const auto& tag : others) {
+        m_writer.String(tag.first);
+        m_writer.String(tag.second);
+    }
+
     m_writer.EndObject();
 }
 

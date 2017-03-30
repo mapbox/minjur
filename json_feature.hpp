@@ -76,6 +76,8 @@ public:
 
     void add_properties(const osmium::OSMObject& object);
 
+    void add_properties(const osmium::OSMObject& object, std::map<std::string, std::string>);
+
     void append_to(std::string& buffer);
 
 }; // class JSONFeature
