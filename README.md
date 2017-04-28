@@ -90,7 +90,7 @@ the changes:
 
 Repeat the last two lines for every change file.
 
-For planet updates, you'll need at least 25GB RAM for the node location cache,
+For planet updates, you'll need at least 40GB RAM for the node location cache,
 on OS/X and Windows it could be twice that!
 
 ## minjur-generate-tilelist
