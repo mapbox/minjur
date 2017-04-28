@@ -31,8 +31,8 @@ class JSONAreaHandler : public JSONHandler {
 
 public:
 
-    JSONAreaHandler(const std::string& error_file, const std::string& attr_prefix, bool with_id) :
-        JSONHandler(error_file, attr_prefix, with_id) {
+    JSONAreaHandler(const std::string& error_file, const std::string& attr_prefix, bool with_id, std::string node_attr) :
+        JSONHandler(error_file, attr_prefix, with_id, node_attr) {
     }
 
     void node(const osmium::Node& node) {
@@ -63,11 +63,23 @@ public:
         }
         try {
             JSONFeature feature{attr_names()};
+            std::map<std::string, std::string> additions;
             if (with_id()) {
                 feature.add_id("w", way.id());
             }
+            if (node_attr().size() != 0) {
+                std::string nodes = "";
+                auto appendnode = [&](const osmium::NodeRef & nr) {
+                    if (nodes.size() > 0) {
+                        nodes += ',';
+                    }
+                    nodes += std::to_string(nr.ref());
+                };
+                std::for_each(way.nodes().cbegin(), way.nodes().cend(), appendnode);
+                additions.insert(std::pair<std::string, std::string>(node_attr(), nodes));
+            }
             feature.add_linestring(way);
-            feature.add_properties(way);
+            feature.add_properties(way, additions);
             feature.append_to(buffer());
         } catch (const osmium::geometry_error&) {
             report_geometry_problem(way, "geometry_error");
@@ -111,6 +123,7 @@ void print_help() {
               << "  -l, --location-store=TYPE  Set location store\n"
               << "  -L, --list-location-stores Show available location stores\n"
               << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n"
+              << "  -N, --nodes-attribute=ID   Add an attribute, with the specified name, to each feature, listing its node IDs\n"
               << "  -a, --attr-prefix=PREFIX   Optional prefix for attributes, defaults to '@'\n";
 }
 
@@ -129,6 +142,7 @@ int main(int argc, char* argv[]) {
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
         {"nodes",                required_argument, 0, 'n'},
+        {"nodes-attribute",      required_argument, 0, 'N'},
         {"attr-prefix",          required_argument, 0, 'a'},
         {0, 0, 0, 0}
     };
@@ -136,11 +150,12 @@ int main(int argc, char* argv[]) {
     std::string location_store;
     std::string error_file;
     std::string attr_prefix = "@";
+    std::string node_attr = "";
     bool nodes_dense = false;
     bool with_id = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "e:hivl:Ln:a:", long_options, 0);
+        int c = getopt_long(argc, argv, "e:hivl:Ln:a:N:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -176,6 +191,9 @@ int main(int argc, char* argv[]) {
                     std::cerr << "Set --nodes, -n to 'sparse' or 'dense'\n";
                     std::exit(1);
                 }
+                break;
+            case 'N':
+                node_attr = std::string(optarg);
                 break;
             case 'a':
                 attr_prefix = optarg;
@@ -220,7 +238,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler{*index};
     location_handler.ignore_errors();
 
-    JSONAreaHandler json_handler{error_file, attr_prefix, with_id};
+    JSONAreaHandler json_handler{error_file, attr_prefix, with_id, node_attr};
     osmium::handler::CheckOrder check_order_handler;
 
     std::cerr << "Pass 2...\n";

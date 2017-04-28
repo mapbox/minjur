@@ -42,6 +42,7 @@ Options:
     -l, --location-store=TYPE  Set location store
     -L, --list-location-stores Show available location stores
     -n, --nodes=sparse|dense   Are node IDs sparse or dense?
+    -N, --nodes-attribute=ID   Add an attribute, with the specified name, to each feature, listing its node IDs
     -p, --polygons             Create polygons from closed ways
     -t, --tilefile=FILE        File with tiles to filter
     -z, --zoom=ZOOM            Zoom level for tiles (default: 15)

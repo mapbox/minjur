@@ -55,8 +55,8 @@ class JSONNoAreaHandler : public JSONHandler {
 
 public:
 
-    JSONNoAreaHandler(unsigned int zoom, const std::string& error_file, const std::string& attr_prefix, bool with_id, bool create_polygons, const tileset_type& tiles) :
-        JSONHandler(error_file, attr_prefix, with_id),
+    JSONNoAreaHandler(unsigned int zoom, const std::string& error_file, const std::string& attr_prefix, bool with_id, bool create_polygons, const tileset_type& tiles, std::string &node_attr) :
+        JSONHandler(error_file, attr_prefix, with_id, node_attr),
         m_create_polygons(create_polygons),
         m_tiles(tiles),
         m_zoom(zoom),
@@ -213,13 +213,26 @@ public:
                 l_p =linestring_and_or_polygon(way);
             }
 
+            std::map<std::string, std::string> additions;
+
             if (l_p.first) { // output as linestring
                 JSONFeature feature{attr_names()};
                 if (with_id()) {
                     feature.add_id("wl", way.id());
                 }
+                if (node_attr().size() != 0) {
+                    std::string nodes = "";
+                    auto appendnode = [&](const osmium::NodeRef & nr) {
+                        if (nodes.size() > 0) {
+                            nodes += ',';
+                        }
+                        nodes += std::to_string(nr.ref());
+                    };
+                    std::for_each(way.nodes().cbegin(), way.nodes().cend(), appendnode);
+                    additions.insert(std::pair<std::string, std::string>(node_attr(), nodes));
+                }
                 feature.add_linestring(way);
-                feature.add_properties(way);
+                feature.add_properties(way, additions);
                 feature.append_to(buffer());
             }
 
@@ -228,8 +241,19 @@ public:
                 if (with_id()) {
                     feature.add_id("wp", way.id());
                 }
+                if (node_attr().size() != 0) {
+                    std::string nodes = "";
+                    auto appendnode = [&](const osmium::NodeRef & nr) {
+                        if (nodes.size() > 0) {
+                            nodes += ',';
+                        }
+                        nodes += std::to_string(nr.ref());
+                    };
+                    std::for_each(way.nodes().cbegin(), way.nodes().cend(), appendnode);
+                    additions.insert(std::pair<std::string, std::string>(node_attr(), nodes));
+                }
                 feature.add_polygon(way);
-                feature.add_properties(way);
+                feature.add_properties(way, additions);
                 feature.append_to(buffer());
             }
         } catch (const osmium::geometry_error&) {
@@ -256,6 +280,7 @@ void print_help() {
               << "  -l, --location-store=TYPE  Set location store\n"
               << "  -L, --list-location-stores Show available location stores\n"
               << "  -n, --nodes=sparse|dense   Are node IDs sparse or dense?\n"
+              << "  -N, --nodes-attribute=ID   Add an attribute, with the specified name, to each feature, listing its node IDs\n"
               << "  -p, --polygons             Create polygons from closed ways\n"
               << "  -t, --tilefile=FILE        File with tiles to filter\n"
               << "  -z, --zoom=ZOOM            Zoom level for tiles (default: 15)\n"
@@ -299,6 +324,7 @@ int main(int argc, char* argv[]) {
         {"location-store",       required_argument, 0, 'l'},
         {"list-location-stores",       no_argument, 0, 'L'},
         {"nodes",                required_argument, 0, 'n'},
+        {"nodes-attribute",      required_argument, 0, 'N'},
         {"polygons",                   no_argument, 0, 'p'},
         {"tilefile",             required_argument, 0, 't'},
         {"zoom",                 required_argument, 0, 'z'},
@@ -311,13 +337,14 @@ int main(int argc, char* argv[]) {
     std::string error_file;
     std::string tile_file_name;
     std::string attr_prefix = "@";
+    std::string node_attr = "";
     bool create_polygons = false;
     unsigned int zoom = 15;
     bool nodes_dense = false;
     bool with_id = false;
 
     while (true) {
-        int c = getopt_long(argc, argv, "d:e:hivl:Ln:pt:z:a:", long_options, 0);
+        int c = getopt_long(argc, argv, "d:e:hivl:Ln:pt:z:a:N:", long_options, 0);
         if (c == -1) {
             break;
         }
@@ -356,6 +383,9 @@ int main(int argc, char* argv[]) {
                     std::cerr << "Set --nodes, -n to 'sparse' or 'dense'\n";
                     std::exit(1);
                 }
+                break;
+            case 'N':
+                node_attr = std::string(optarg);
                 break;
             case 'p':
                 create_polygons = true;
@@ -404,7 +434,7 @@ int main(int argc, char* argv[]) {
     location_handler_type location_handler{*index};
     location_handler.ignore_errors();
 
-    JSONNoAreaHandler json_handler{zoom, error_file, attr_prefix, with_id, create_polygons, tiles};
+    JSONNoAreaHandler json_handler{zoom, error_file, attr_prefix, with_id, create_polygons, tiles, node_attr};
 
     osmium::apply(reader, location_handler, json_handler);
     reader.close();

@@ -19,6 +19,7 @@ class JSONHandler : public osmium::handler::Handler {
     std::unique_ptr<std::ofstream> m_error_stream;
     int m_geometry_error_count;
     bool m_with_id;
+    std::string m_node_attr;
 
     void flush_to_output();
 
@@ -36,6 +37,10 @@ protected:
         return m_with_id;
     }
 
+    std::string node_attr() const noexcept {
+        return m_node_attr;
+    }
+
     void maybe_flush() {
         if (m_buffer.size() > 1024*1024) {
             flush_to_output();
@@ -44,12 +49,13 @@ protected:
 
     void report_geometry_problem(const osmium::OSMObject& object, const char* error);
 
-    JSONHandler(const std::string& error_file, const std::string& attr_prefix, bool with_id) :
+    JSONHandler(const std::string& error_file, const std::string& attr_prefix, bool with_id, std::string node_attr) :
         m_buffer(),
         m_attr_names(attr_prefix),
         m_error_stream(nullptr),
         m_geometry_error_count(0),
-        m_with_id(with_id) {
+        m_with_id(with_id),
+        m_node_attr(node_attr) {
         if (!error_file.empty()) {
             m_error_stream.reset(new std::ofstream(error_file));
         }
