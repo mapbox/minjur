@@ -1,6 +1,10 @@
 
 # minjur
 
+**This program will not be developed any further. We recommend you use the
+[`export`](http://docs.osmcode.org/osmium/latest/osmium-export.html)
+command of [osmium-tool](http://osmcode.org/osmium-tool) instead.**
+
 Osmium-based converter of OSM data to GeoJSON.
 
 [![Build Status](https://secure.travis-ci.org/mapbox/minjur.png)](https://travis-ci.org/mapbox/minjur)
